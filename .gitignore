@@ -1,0 +1,6 @@
+*.log
+*.pickle
+config.py
+__pycache__
+.venv
+venv
