@@ -10,6 +10,7 @@ from jira import JIRA
 
 
 def get_toggl_time_entries(start_date, end_date):
+    logging.info("get toggl time entries for " + str(start_date) + " to " + str(end_date))
     # prepare headers
     apiAUth = b64encode(bytes(config.toggl_api_token + ":api_token", 'ascii')).decode("ascii")
     # apiAUth = b64encode(bytes(config.toggl_cred + ":api_token", 'ascii')).decode("ascii") # alternative to api_token
@@ -88,6 +89,7 @@ def get_toggl_time_entries(start_date, end_date):
 
 
 def get_eucon_jira_worklog_list(start_date, end_date):
+    logging.info("get eucon jira worklog for " + str(start_date) + " to " + str(end_date))
     # get booked time entries in Jira
     jira = JIRA(
         basic_auth=(config.jira_user, config.jira_token),
@@ -152,7 +154,7 @@ if __name__ == '__main__':
     logging.info("Starting Toggl to Jira Transfer")
     logging.debug("Debugging is enabled")
     
-    start_date = date(2022, 11, 1)
+    start_date = date(2023, 1, 15)
     end_date = datetime.now().date()
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))
