@@ -76,7 +76,7 @@ def update_entries_in_anw (time_entry_list, file_path):
         
         if project_col is None or excel_proj != project[:4]:
             logging.error("project not found in excel")
-            raise Exception("project not found in excel")
+            raise KeyError("project not found in excel")
         
         
         for date in time_entry_list[project]:
