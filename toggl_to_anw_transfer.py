@@ -108,7 +108,7 @@ if __name__ == '__main__':
     logging.info("Starting Toggl to Jira Transfer")
     logging.debug("Debugging is enabled")
     
-    start_date = date(2023, 1, 1)
+    start_date = date(2023, 3, 1)
     start_date = start_date.replace(day=1)
     end_date = (start_date + timedelta(days=32)).replace(day=1) # start of next month
     logging.debug("Start Date: " + str(start_date))

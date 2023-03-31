@@ -145,7 +145,7 @@ if __name__ == '__main__':
     logging.info("Starting Toggl to Jira Transfer")
     logging.debug("Debugging is enabled")
     
-    start_date = date(2023, 1, 1)
+    start_date = date(2023, 3, 1)
     end_date = datetime.now().date()
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))
