@@ -34,36 +34,38 @@ def get_toggl_time_entries(start_date, end_date):
         if time_entry["duration"] < 0:
             continue
         
-        if time_entry_list.get(project_list[time_entry["project_id"]]) is None:
-            time_entry_list[project_list[time_entry["project_id"]]] = {}
+        project = project_list[time_entry["project_id"]]
+        
+        if time_entry_list.get(project) is None:
+            time_entry_list[project] = {}
         
         date = datetime.strptime(time_entry["start"], "%Y-%m-%dT%H:%M:%S%z").date()
-        if time_entry_list[project_list[time_entry["project_id"]]].get(date) is None:
-            time_entry_list[project_list[time_entry["project_id"]]][date] = {}
+        if time_entry_list[project].get(date) is None:
+            time_entry_list[project][date] = {}
         
         # seperate Eucon cases into Ticket-ID
         euc_ticket_string_reg = r"^\w+-\d+ - "
-        if "2779 Produkt" in project_list[time_entry["project_id"]]:
+        if "2779 Produkt" in project:
             ticket = re.search(r"^\w+-\d+", time_entry["description"], re.IGNORECASE).group(0)
-            if time_entry_list[project_list[time_entry["project_id"]]][date].get(ticket) is None:
-                time_entry_list[project_list[time_entry["project_id"]]][date][ticket] = {}
+            if time_entry_list[project][date].get(ticket) is None:
+                time_entry_list[project][date][ticket] = {}
             
-            if time_entry_list[project_list[time_entry["project_id"]]][date][ticket].get("hours") is None:
-                time_entry_list[project_list[time_entry["project_id"]]][date][ticket]["hours"] = time_entry["duration"] / 3600
+            if time_entry_list[project][date][ticket].get("hours") is None:
+                time_entry_list[project][date][ticket]["hours"] = time_entry["duration"] / 3600
             else:
-                time_entry_list[project_list[time_entry["project_id"]]][date][ticket]["hours"] += time_entry["duration"] / 3600
+                time_entry_list[project][date][ticket]["hours"] += time_entry["duration"] / 3600
             
-            if time_entry_list[project_list[time_entry["project_id"]]][date][ticket].get("description") is None:
+            if time_entry_list[project][date][ticket].get("description") is None:
                 description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
                 if "#" in description:
                     description = description[:description.index("#")].strip()
-                time_entry_list[project_list[time_entry["project_id"]]][date][ticket]["description"] = description
+                time_entry_list[project][date][ticket]["description"] = description
             else:
                 description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
                 if "#" in description:
                     description = description[:description.index("#")].strip()
-                if description not in time_entry_list[project_list[time_entry["project_id"]]][date][ticket]["description"]:
-                    time_entry_list[project_list[time_entry["project_id"]]][date][ticket]["description"] += ", " + description
+                if description not in time_entry_list[project][date][ticket]["description"]:
+                    time_entry_list[project][date][ticket]["description"] += ", " + description
 
     # pickle.dump(time_entry_list, open("time_entry_list.pickle", "wb"))
     return time_entry_list

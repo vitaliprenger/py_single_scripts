@@ -35,18 +35,28 @@ def get_toggl_time_entries(start_date, end_date):
         # skip entries with $ in description -> entries with $ are were done by other persons
         if time_entry["duration"] < 0 or "$" in time_entry["description"]:
             continue
+        if "reisen" not in time_entry["description"].lower():
+            project = project_list[time_entry["project_id"]]
+        else:
+            project = project_list[time_entry["project_id"]] + " - Reisen"
         
-        if time_entry_list.get(project_list[time_entry["project_id"]]) is None:
-            time_entry_list[project_list[time_entry["project_id"]]] = {}
+        # create project entry if missing
+        if time_entry_list.get(project) is None:
+            time_entry_list[project] = {}
             
         date = datetime.strptime(time_entry["start"], "%Y-%m-%dT%H:%M:%S%z").date()
-        if time_entry_list[project_list[time_entry["project_id"]]].get(date) is None:
-            time_entry_list[project_list[time_entry["project_id"]]][date] = {}
+        if time_entry_list[project].get(date) is None:
+            time_entry_list[project][date] = {}
         
-        if time_entry_list[project_list[time_entry["project_id"]]][date].get("hours") is None:
-                time_entry_list[project_list[time_entry["project_id"]]][date]["hours"] = time_entry["duration"] / 3600
+        if time_entry_list[project][date].get("hours") is None:
+                time_entry_list[project][date]["hours"] = time_entry["duration"] / 3600
         else:
-            time_entry_list[project_list[time_entry["project_id"]]][date]["hours"] += time_entry["duration"] / 3600
+            time_entry_list[project][date]["hours"] += time_entry["duration"] / 3600
+        
+        if time_entry_list[project][date].get("description") is None:
+            time_entry_list[project][date]["description"] = time_entry["description"]
+        else:
+            time_entry_list[project][date]["description"] += ", " + time_entry["description"]
                 
     # pickle.dump(time_entry_list, open("time_entry_list.pickle", "wb"))
     return time_entry_list
@@ -59,7 +69,7 @@ def update_entries_in_anw (time_entry_list, file_path):
     for project in time_entry_list:
         logging.debug("project: " + project)
         
-        if "Reisen" not in project:
+        if "reisen" not in project.lower():
             col_start = 8
             col_end = 34
         else:
@@ -118,7 +128,7 @@ if __name__ == '__main__':
 
     # time_entry_list = pickle.load(open("time_entry_list.pickle", "rb"))
     
-    file_path = "C:/Users/PrV/OneDrive - viadee Unternehmensberatung AG/Arbeitsnachweis/Anw_PrV_" + str(start_date.year) + str(start_date.month).zfill(2) + ".xlsx"
+    file_path = "/mnt/c/Users/PrV/OneDrive - viadee Unternehmensberatung AG/Arbeitsnachweis/Anw_PrV_" + str(start_date.year) + str(start_date.month).zfill(2) + ".xlsx"
     
     update_entries_in_anw(time_entry_list, file_path)
     
