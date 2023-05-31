@@ -27,6 +27,9 @@ def get_toggl_time_entries(start_date, end_date):
     # request time entries for start_date to end_date
 
     time_response = requests.get('https://api.track.toggl.com/api/v9/me/time_entries?start_date=' + str(start_date) + '&end_date=' + str(end_date), headers=headers)
+    if time_response.status_code != 200:
+        logging.error("Error: " + str(time_response.status_code) + " " + time_response.reason)
+        raise Exception("Errortext: " + str(time_response.text))
 
     time_entry_list = {}
     # json structure {'id': 2820044493, 'workspace_id': 3242752, 'project_id': 149577627, 'task_id': None, 'billable': False, 'start': '2023-01-27T13:15:34+00:00', 'stop': '2023-01-27T14:00:34Z', 'duration': 2700, 'description': 'Recherche crisp-dm | asum-dm', 'tags': None, 'tag_ids': None, 'duronly': True, 'at': '2023-01-27T13:59:06+00:00', 'server_deleted_at': None, ...}
@@ -118,7 +121,7 @@ if __name__ == '__main__':
     logging.info("Starting Toggl to Jira Transfer")
     logging.debug("Debugging is enabled")
     
-    start_date = date(2023, 3, 1)
+    start_date = date(2023, 5, 1)
     start_date = start_date.replace(day=1)
     end_date = (start_date + timedelta(days=32)).replace(day=1) # start of next month
     logging.debug("Start Date: " + str(start_date))
@@ -132,4 +135,4 @@ if __name__ == '__main__':
     
     update_entries_in_anw(time_entry_list, file_path)
     
-    
+    logging.info("Finished Toggl to Anw Transfer")
