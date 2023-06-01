@@ -7,6 +7,8 @@ import re
 import pickle
 from jira import JIRA
 
+start_date = date(2023, 4, 1)
+
 def get_toggl_time_entries(start_date, end_date):
     logging.info("get toggl time entries for " + str(start_date) + " to " + str(end_date))
     # prepare headers
@@ -150,7 +152,6 @@ if __name__ == '__main__':
     logging.info("Starting Toggl to Jira Transfer")
     logging.debug("Debugging is enabled")
     
-    start_date = date(2023, 4, 1)
     end_date = datetime.now().date()
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))

@@ -8,6 +8,8 @@ import pickle
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 
+start_date = date(2023, 5, 1)
+
 def get_toggl_time_entries(start_date, end_date):
     logging.info("get toggl time entries for " + str(start_date) + " to " + str(end_date))
     # prepare headers
@@ -121,7 +123,6 @@ if __name__ == '__main__':
     logging.info("Starting Toggl to Jira Transfer")
     logging.debug("Debugging is enabled")
     
-    start_date = date(2023, 5, 1)
     start_date = start_date.replace(day=1)
     end_date = (start_date + timedelta(days=32)).replace(day=1) # start of next month
     logging.debug("Start Date: " + str(start_date))
