@@ -1,10 +1,9 @@
 import config
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from base64 import b64encode
 import requests
 import re
-import pickle
 from jira import JIRA
 
 start_date = date(2023, 4, 1)
@@ -51,7 +50,12 @@ def get_toggl_time_entries(start_date, end_date):
         # seperate Eucon cases into Ticket-ID
         euc_ticket_string_reg = r"^\w+-\d+ - "
         if "2779 Produkt" in project:
-            ticket = re.search(r"^\w+-\d+", time_entry["description"], re.IGNORECASE).group(0)
+            match = re.search(r"^\w+-\d+", time_entry["description"], re.IGNORECASE)
+            if match:
+                ticket = match.group(0)
+            else:
+                raise Exception("-- Description '" + str(time_entry["description"]) + "' has no ticket id --")
+                
             if time_entry_list[project][date].get(ticket) is None:
                 time_entry_list[project][date][ticket] = {}
             
@@ -89,7 +93,7 @@ def get_eucon_jira_worklog_list(start_date, end_date):
     jiraWorklogList = {}
     for issue in issues:
         # create jira api request for worklog of issue
-        url = "https://projects.eucon-services.com/jira/rest/api/2/issue/" + issue.key + "/worklog"
+        url = "https://projects.eucon-services.com/jira/rest/api/2/issue/" + issue.key + "/worklog" # type: ignore
         response = requests.get(url, auth=(config.jira_user, config.jira_token))
         for worklog in response.json()["worklogs"]:
             
@@ -98,8 +102,8 @@ def get_eucon_jira_worklog_list(start_date, end_date):
                 if jiraWorklogList.get(worklogDate) is None:
                     jiraWorklogList[worklogDate] = {}
                 
-                if jiraWorklogList[worklogDate].get(issue.key) is None:
-                    jiraWorklogList[worklogDate][issue.key] = worklog["timeSpentSeconds"] / 3600
+                if jiraWorklogList[worklogDate].get(issue.key) is None: # type: ignore
+                    jiraWorklogList[worklogDate][issue.key] = worklog["timeSpentSeconds"] / 3600 # type: ignore
     
     # pickle.dump(jiraWorklogList, open("jiraWorklogList.pickle", "wb"))
     return jiraWorklogList

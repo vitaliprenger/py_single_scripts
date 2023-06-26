@@ -1,14 +1,10 @@
 import config
 import logging
 from datetime import date, datetime, timedelta
-import calendar
 from base64 import b64encode
 import requests
-import pickle
 from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter
-
-start_date = date(2023, 5, 1)
+import os
 
 def get_toggl_time_entries(start_date, end_date):
     logging.info("get toggl time entries for " + str(start_date) + " to " + str(end_date))
@@ -71,6 +67,7 @@ def update_entries_in_anw (time_entry_list, file_path):
     logging.info("update entries in anw")
     wb = load_workbook(file_path)
     anw = wb["ANW"]
+    
     for project in time_entry_list:
         logging.debug("project: " + project)
         
@@ -81,17 +78,20 @@ def update_entries_in_anw (time_entry_list, file_path):
             col_start = 36
             col_end = 40
         
+        project_col = -1
+        excel_proj = "empty"
+        
         for col in range(col_start, col_end):
             if anw.cell(row=4, column=col).value is None or anw.cell(row=4, column=col).value == "":
                 continue
-            excel_proj = anw.cell(row=4, column=col).value[:4]
+            excel_proj = anw.cell(row=4, column=col).value[:4] # type: ignore
             if excel_proj == project[:4]:
                 project_col = col
                 break
         
-        if project_col is None or excel_proj != project[:4]:
-            logging.error("project not found in excel")
-            raise KeyError("project not found in excel")
+        if project_col == -1 or excel_proj != project[:4]:
+            logging.error("project '" + str(project) + "' not found in excel")
+            raise KeyError("project '" + str(project) + "' not found in excel")
         
         
         for date in time_entry_list[project]:
@@ -102,7 +102,7 @@ def update_entries_in_anw (time_entry_list, file_path):
             
             day = date.day
             
-            anw.cell(row = day + row_offset, column=col).value = time_entry_list[project][date]["hours"]
+            anw.cell(row = day + row_offset, column=project_col).value = time_entry_list[project][date]["hours"]
                     
                     
     wb.save(file_path.replace(".xlsx", "") + "n.xlsx")
@@ -123,7 +123,22 @@ if __name__ == '__main__':
     logging.info("Starting Toggl to Jira Transfer")
     logging.debug("Debugging is enabled")
     
+
+    start_date = date(2023, 5, 1)
+    start_date = date.today().replace(day=1)
     start_date = start_date.replace(day=1)
+    folder = "/mnt/c/Users/PrV/OneDrive - viadee Unternehmensberatung AG/Arbeitsnachweis/"
+    file = "Anw_PrV_" + str(start_date.year) + str(start_date.month).zfill(2) + ".xlsx"
+    
+    # check if file_path exists
+    if not os.path.isfile(folder + file):
+        file_month_before = "Anw_PrV_" + str(start_date.year) + str(start_date.month - 1).zfill(2) + ".xlsx"
+        if os.path.isfile(folder + file_month_before):
+            file = file_month_before
+        else:
+            raise FileNotFoundError("File '" + folder + file + "' not found")
+        
+    
     end_date = (start_date + timedelta(days=32)).replace(day=1) # start of next month
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))
@@ -132,8 +147,6 @@ if __name__ == '__main__':
 
     # time_entry_list = pickle.load(open("time_entry_list.pickle", "rb"))
     
-    file_path = "/mnt/c/Users/PrV/OneDrive - viadee Unternehmensberatung AG/Arbeitsnachweis/Anw_PrV_" + str(start_date.year) + str(start_date.month).zfill(2) + ".xlsx"
-    
-    update_entries_in_anw(time_entry_list, file_path)
+    update_entries_in_anw(time_entry_list, folder + file)
     
     logging.info("Finished Toggl to Anw Transfer")
