@@ -1,83 +1,83 @@
 import config
+from toggl_parse_data import get_toggl_time_entries
 import logging
 from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
 from base64 import b64encode
 import requests
 import re
 from jira import JIRA
 
-start_date = date(2023, 4, 1)
-
-def get_toggl_time_entries(start_date, end_date):
-    logging.info("get toggl time entries for " + str(start_date) + " to " + str(end_date))
-    # prepare headers
-    api_auth = b64encode(bytes(config.toggl_api_token + ":api_token", 'ascii')).decode("ascii")
-    # apiAUth = b64encode(bytes(config.toggl_cred + ":api_token", 'ascii')).decode("ascii") # alternative to api_token
-    headers = { 'Authorization' : 'Basic %s' %  api_auth }
+# def get_toggl_time_entries(start_date, end_date):
+#     logging.info("get toggl time entries for " + str(start_date) + " to " + str(end_date))
+#     # prepare headers
+#     api_auth = b64encode(bytes(config.toggl_api_token + ":api_token", 'ascii')).decode("ascii")
+#     # apiAUth = b64encode(bytes(config.toggl_cred + ":api_token", 'ascii')).decode("ascii") # alternative to api_token
+#     headers = { 'Authorization' : 'Basic %s' %  api_auth }
 
 
-    # request project_list
-    project_list = {}
-    response = requests.get('https://api.track.toggl.com/api/v9/me/projects', headers=headers)
-    for project in response.json():
-        if project_list.get(project["id"]) is None:
-            project_list[project["id"]] = project["name"]
+#     # request project_list
+#     project_list = {}
+#     response = requests.get('https://api.track.toggl.com/api/v9/me/projects', headers=headers)
+#     for project in response.json():
+#         if project_list.get(project["id"]) is None:
+#             project_list[project["id"]] = project["name"]
 
 
-    # request time entries for start_date to end_date
+#     # request time entries for start_date to end_date
 
-    time_response = requests.get('https://api.track.toggl.com/api/v9/me/time_entries?start_date=' + str(start_date) + '&end_date=' + str(end_date), headers=headers)
-    if time_response.status_code != 200:
-        logging.error("Error: " + str(time_response.status_code) + " " + time_response.reason)
-        raise Exception("Errortext: " + str(time_response.text))
+#     time_response = requests.get('https://api.track.toggl.com/api/v9/me/time_entries?start_date=' + str(start_date) + '&end_date=' + str(end_date), headers=headers)
+#     if time_response.status_code != 200:
+#         logging.error("Error: " + str(time_response.status_code) + " " + time_response.reason)
+#         raise Exception("Errortext: " + str(time_response.text))
 
-    time_entry_list = {}
-    # json structure {'id': 2820044493, 'workspace_id': 3242752, 'project_id': 149577627, 'task_id': None, 'billable': False, 'start': '2023-01-27T13:15:34+00:00', 'stop': '2023-01-27T14:00:34Z', 'duration': 2700, 'description': 'Recherche crisp-dm | asum-dm', 'tags': None, 'tag_ids': None, 'duronly': True, 'at': '2023-01-27T13:59:06+00:00', 'server_deleted_at': None, ...}
-    for time_entry in time_response.json():
-        # skip entries with negative duration -> current running entries
-        if time_entry["duration"] < 0:
-            continue
+#     time_entry_list = {}
+#     # json structure {'id': 2820044493, 'workspace_id': 3242752, 'project_id': 149577627, 'task_id': None, 'billable': False, 'start': '2023-01-27T13:15:34+00:00', 'stop': '2023-01-27T14:00:34Z', 'duration': 2700, 'description': 'Recherche crisp-dm | asum-dm', 'tags': None, 'tag_ids': None, 'duronly': True, 'at': '2023-01-27T13:59:06+00:00', 'server_deleted_at': None, ...}
+#     for time_entry in time_response.json():
+#         # skip entries with negative duration -> current running entries
+#         if time_entry["duration"] < 0:
+#             continue
         
-        project = project_list[time_entry["project_id"]]
+#         project = project_list[time_entry["project_id"]]
         
-        if time_entry_list.get(project) is None:
-            time_entry_list[project] = {}
+#         if time_entry_list.get(project) is None:
+#             time_entry_list[project] = {}
         
-        date = datetime.strptime(time_entry["start"], "%Y-%m-%dT%H:%M:%S%z").date()
-        if time_entry_list[project].get(date) is None:
-            time_entry_list[project][date] = {}
+#         date = datetime.strptime(time_entry["start"], "%Y-%m-%dT%H:%M:%S%z").date()
+#         if time_entry_list[project].get(date) is None:
+#             time_entry_list[project][date] = {}
         
-        # seperate Eucon cases into Ticket-ID
-        euc_ticket_string_reg = r"^\w+-\d+ - "
-        if "2779 Produkt" in project:
-            match = re.search(r"^\w+-\d+", time_entry["description"], re.IGNORECASE)
-            if match:
-                ticket = match.group(0)
-            else:
-                raise Exception("-- Description '" + str(time_entry["description"]) + "' has no ticket id --")
+#         # seperate Eucon cases into Ticket-ID
+#         euc_ticket_string_reg = r"^\w+-\d+ - "
+#         if "2779 Produkt" in project:
+#             # match = re.search(r"^\w+-\d+", time_entry["description"], re.IGNORECASE)
+#             # if match:
+#             #     ticket = match.group(0)
+#             # else:
+#             #     raise Exception("-- Description '" + str(time_entry["description"]) + "' has no ticket id --")
                 
-            if time_entry_list[project][date].get(ticket) is None:
-                time_entry_list[project][date][ticket] = {}
+#             # if time_entry_list[project][date].get(ticket) is None:
+#             #     time_entry_list[project][date][ticket] = {}
             
-            if time_entry_list[project][date][ticket].get("hours") is None:
-                time_entry_list[project][date][ticket]["hours"] = time_entry["duration"] / 3600
-            else:
-                time_entry_list[project][date][ticket]["hours"] += time_entry["duration"] / 3600
+#             if time_entry_list[project][date][ticket].get("hours") is None:
+#                 time_entry_list[project][date][ticket]["hours"] = time_entry["duration"] / 3600
+#             else:
+#                 time_entry_list[project][date][ticket]["hours"] += time_entry["duration"] / 3600
             
-            if time_entry_list[project][date][ticket].get("description") is None:
-                description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
-                if "#" in description:
-                    description = description[:description.index("#")].strip()
-                time_entry_list[project][date][ticket]["description"] = description
-            else:
-                description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
-                if "#" in description:
-                    description = description[:description.index("#")].strip()
-                if description not in time_entry_list[project][date][ticket]["description"]:
-                    time_entry_list[project][date][ticket]["description"] += ", " + description
+#             if time_entry_list[project][date][ticket].get("description") is None:
+#                 description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
+#                 if "#" in description:
+#                     description = description[:description.index("#")].strip()
+#                 time_entry_list[project][date][ticket]["description"] = description
+#             else:
+#                 description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
+#                 if "#" in description:
+#                     description = description[:description.index("#")].strip()
+#                 if description not in time_entry_list[project][date][ticket]["description"]:
+#                     time_entry_list[project][date][ticket]["description"] += ", " + description
 
-    # pickle.dump(time_entry_list, open("time_entry_list.pickle", "wb"))
-    return time_entry_list
+#     # pickle.dump(time_entry_list, open("time_entry_list.pickle", "wb"))
+#     return time_entry_list
 
 def get_eucon_jira_worklog_list(start_date, end_date):
     logging.info("get eucon jira worklog for " + str(start_date) + " to " + str(end_date))
@@ -121,7 +121,7 @@ def add_missing_entries_for_eucon (timeEntryList, jiraWorklogList):
         if "2779 Produkt" in project:
             for date in timeEntryList[project]:
                 for ticket in timeEntryList[project][date]:
-                    if jiraWorklogList.get(date) is None or jiraWorklogList[date].get(ticket) is None or jiraWorklogList[date][ticket] != timeEntryList[project][date][ticket]["hours"]:
+                    if (jiraWorklogList.get(date) is None or jiraWorklogList[date].get(ticket) is None or jiraWorklogList[date][ticket] != timeEntryList[project][date][ticket]["hours"]) and ticket != "hours" and ticket != "description":
                         
                         hours = timeEntryList[project][date][ticket]["hours"]
                         desc = timeEntryList[project][date][ticket]["description"]
@@ -156,11 +156,16 @@ if __name__ == '__main__':
     logging.info("Starting Toggl to Jira Transfer")
     logging.debug("Debugging is enabled")
     
+    
+    # start_date = date(2023, 6, 1)
+    # set start date to first day of previous month
+    start_date = date.today().replace(day=1) - relativedelta(months=1)	
+    
     end_date = datetime.now().date()
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))
     
-    time_entry_list = get_toggl_time_entries(start_date, end_date)
+    time_entry_list, workingtime_by_day_list = get_toggl_time_entries(start_date, end_date)
 
     # time_entry_list = pickle.load(open("timeEntryList.pickle", "rb"))
     

@@ -1,73 +1,20 @@
-import config
+from toggl_parse_data import get_toggl_time_entries
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from dateutil.relativedelta import relativedelta
+from zoneinfo import ZoneInfo
 from base64 import b64encode
 import requests
 from openpyxl import load_workbook
 import os
 
-def get_toggl_time_entries(start_date, end_date):
-    logging.info("get toggl time entries for " + str(start_date) + " to " + str(end_date))
-    # prepare headers
-    api_auth = b64encode(bytes(config.toggl_api_token + ":api_token", 'ascii')).decode("ascii")
-    # apiAUth = b64encode(bytes(config.toggl_cred + ":api_token", 'ascii')).decode("ascii") # alternative to api_token
-    headers = { 'Authorization' : 'Basic %s' %  api_auth }
-
-
-    # request project_list
-    project_list = {}
-    response = requests.get('https://api.track.toggl.com/api/v9/me/projects', headers=headers)
-    for project in response.json():
-        if project_list.get(project["id"]) is None:
-            project_list[project["id"]] = project["name"]
-
-
-    # request time entries for start_date to end_date
-
-    time_response = requests.get('https://api.track.toggl.com/api/v9/me/time_entries?start_date=' + str(start_date) + '&end_date=' + str(end_date), headers=headers)
-    if time_response.status_code != 200:
-        logging.error("Error: " + str(time_response.status_code) + " " + time_response.reason)
-        raise Exception("Errortext: " + str(time_response.text))
-
-    time_entry_list = {}
-    # json structure {'id': 2820044493, 'workspace_id': 3242752, 'project_id': 149577627, 'task_id': None, 'billable': False, 'start': '2023-01-27T13:15:34+00:00', 'stop': '2023-01-27T14:00:34Z', 'duration': 2700, 'description': 'Recherche crisp-dm | asum-dm', 'tags': None, 'tag_ids': None, 'duronly': True, 'at': '2023-01-27T13:59:06+00:00', 'server_deleted_at': None, ...}
-    for time_entry in time_response.json():
-        # skip entries with negative duration -> current running entries
-        # skip entries with $ in description -> entries with $ are were done by other persons
-        if time_entry["duration"] < 0 or "$" in time_entry["description"]:
-            continue
-        if "reisen" not in time_entry["description"].lower():
-            project = project_list[time_entry["project_id"]]
-        else:
-            project = project_list[time_entry["project_id"]] + " - Reisen"
-        
-        # create project entry if missing
-        if time_entry_list.get(project) is None:
-            time_entry_list[project] = {}
-            
-        date = datetime.strptime(time_entry["start"], "%Y-%m-%dT%H:%M:%S%z").date()
-        if time_entry_list[project].get(date) is None:
-            time_entry_list[project][date] = {}
-        
-        if time_entry_list[project][date].get("hours") is None:
-                time_entry_list[project][date]["hours"] = time_entry["duration"] / 3600
-        else:
-            time_entry_list[project][date]["hours"] += time_entry["duration"] / 3600
-        
-        if time_entry_list[project][date].get("description") is None:
-            time_entry_list[project][date]["description"] = time_entry["description"]
-        else:
-            time_entry_list[project][date]["description"] += ", " + time_entry["description"]
-                
-    # pickle.dump(time_entry_list, open("time_entry_list.pickle", "wb"))
-    return time_entry_list
-
-    
-def update_entries_in_anw (time_entry_list, file_path):
+   
+def update_entries_in_anw (time_entry_list, file_path, workingtime_by_day_list):
     logging.info("update entries in anw")
     wb = load_workbook(file_path)
     anw = wb["ANW"]
     
+    # enter working hours 
     for project in time_entry_list:
         logging.debug("project: " + project)
         
@@ -103,7 +50,22 @@ def update_entries_in_anw (time_entry_list, file_path):
             day = date.day
             
             anw.cell(row = day + row_offset, column=project_col).value = time_entry_list[project][date]["hours"]
-                    
+    
+    # working times per day       
+    for date in workingtime_by_day_list:
+        logging.debug("date: " + str(date))
+        logging.debug("hours: " + str(workingtime_by_day_list[date]))
+        
+        row_offset = 5
+        
+        day = date.day
+        if  workingtime_by_day_list[date]["endtime"].hour == 0:
+            hour = 24
+        else:
+            hour = int(workingtime_by_day_list[date]["endtime"].strftime("%H"))
+        
+        anw.cell(row = day + row_offset, column=3).value = workingtime_by_day_list[date]["starttime"].hour + workingtime_by_day_list[date]["starttime"].minute/100
+        anw.cell(row = day + row_offset, column=4).value = hour + workingtime_by_day_list[date]["endtime"].minute/100
                     
     wb.save(file_path.replace(".xlsx", "") + "n.xlsx")
 
@@ -124,17 +86,21 @@ if __name__ == '__main__':
     logging.debug("Debugging is enabled")
     
 
-    start_date = date(2023, 5, 1)
-    start_date = date.today().replace(day=1)
-    start_date = start_date.replace(day=1)
+    # start_date = date(2023, 5, 1)
+    # start_date = start_date.replace(day=1)
+    start_date = date.today().replace(day=1)- relativedelta(months=1) # set to first of last month
+    
     folder = "/mnt/c/Users/PrV/OneDrive - viadee Unternehmensberatung AG/Arbeitsnachweis/"
     file = "Anw_PrV_" + str(start_date.year) + str(start_date.month).zfill(2) + ".xlsx"
     
     # check if file_path exists
     if not os.path.isfile(folder + file):
-        file_month_before = "Anw_PrV_" + str(start_date.year) + str(start_date.month - 1).zfill(2) + ".xlsx"
+        # if not, check if file_path of last month exists
+        start_date_new = start_date - relativedelta(months=1)	
+        file_month_before = "Anw_PrV_" + str(start_date_new.year) + str(start_date_new.month).zfill(2) + ".xlsx"
         if os.path.isfile(folder + file_month_before):
             file = file_month_before
+            start_date = start_date_new
         else:
             raise FileNotFoundError("File '" + folder + file + "' not found")
         
@@ -143,10 +109,10 @@ if __name__ == '__main__':
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))
         
-    time_entry_list = get_toggl_time_entries(start_date, end_date)
+    time_entry_list, workingtime_by_day_list = get_toggl_time_entries(start_date, end_date)
 
     # time_entry_list = pickle.load(open("time_entry_list.pickle", "rb"))
     
-    update_entries_in_anw(time_entry_list, folder + file)
+    update_entries_in_anw(time_entry_list, folder + file, workingtime_by_day_list)
     
     logging.info("Finished Toggl to Anw Transfer")
