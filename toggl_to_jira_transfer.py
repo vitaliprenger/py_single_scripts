@@ -8,31 +8,35 @@ import requests
 import re
 from jira import JIRA
 
+jira_url = "https://eucon.atlassian.net"
+
 def get_eucon_jira_worklog_list(start_date, end_date):
-    logging.info("get eucon jira worklog for " + str(start_date) + " to " + str(end_date))
+    logging.info("get eucon jira tempo worklog for " + str(start_date) + " to " + str(end_date))
     # get booked time entries in Jira
     jira = JIRA(
         basic_auth=(config.jira_user, config.jira_token),
         options={
-            'server': 'https://projects.eucon-services.com/jira'
+            'server': jira_url
         }
     )
-    jql = "worklogDate >= " + str(start_date) + " AND worklogDate <= " + str(end_date) + " AND worklogAuthor = currentUser()"
+    jql = f"worklogDate >= {start_date} AND worklogDate <= {end_date} AND worklogAuthor = currentUser()"
     issues = jira.search_issues(jql, maxResults=1000)
+    
+    # Create a dictionary for the request body
     jiraWorklogList = {}
     for issue in issues:
         # create jira api request for worklog of issue
-        url = "https://projects.eucon-services.com/jira/rest/api/2/issue/" + issue.key + "/worklog" # type: ignore
-        response = requests.get(url, auth=(config.jira_user, config.jira_token))
-        for worklog in response.json()["worklogs"]:
-            
-            worklogDate = datetime.strptime(worklog["started"][:worklog["started"].index("T")], '%Y-%m-%d').date()
-            if worklog["author"]["name"] == config.jira_user and start_date <= worklogDate <= end_date:
+        worklogs = jira.worklogs(issue)
+        for worklog in worklogs:
+            worklogDate = datetime.strptime(worklog.started[:worklog.started.index("T")], '%Y-%m-%d').date()
+            if hasattr(worklog.author, 'emailAddress') and worklog.author.emailAddress == config.jira_user \
+                    and start_date <= worklogDate <= end_date:
+                
                 if jiraWorklogList.get(worklogDate) is None:
                     jiraWorklogList[worklogDate] = {}
                 
                 if jiraWorklogList[worklogDate].get(issue.key) is None: # type: ignore
-                    jiraWorklogList[worklogDate][issue.key] = worklog["timeSpentSeconds"] / 3600 # type: ignore
+                    jiraWorklogList[worklogDate][issue.key] = worklog.timeSpentSeconds / 3600 # type: ignore
     
     # pickle.dump(jiraWorklogList, open("jiraWorklogList.pickle", "wb"))
     return jiraWorklogList
@@ -43,7 +47,7 @@ def add_missing_entries_for_eucon (timeEntryList, jiraWorklogList):
     jira = JIRA(
         basic_auth=(config.jira_user, config.jira_token),
         options={
-            'server': 'https://projects.eucon-services.com/jira'
+            'server': jira_url
         }
     )
     for project in timeEntryList:
@@ -86,9 +90,9 @@ if __name__ == '__main__':
     logging.debug("Debugging is enabled")
     
     
-    # start_date = date(2023, 6, 1)
+    # start_date = date(2023, 9, 1)
     # set start date to first day of previous month
-    start_date = date.today().replace(day=1) - relativedelta(months=1)	
+    start_date = date.today().replace(day=1) - relativedelta(months=1)
     
     end_date = datetime.now().date()
     logging.debug("Start Date: " + str(start_date))

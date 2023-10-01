@@ -96,25 +96,25 @@ def get_toggl_time_entries(start_date, end_date):
             else:
                 raise Exception("-- Description '" + str(time_entry["description"]) + "' has no ticket id --")
         
-        if time_entry_list[project][date].get(ticket) is None:
-            time_entry_list[project][date][ticket] = {}
-        
-        if time_entry_list[project][date][ticket].get("hours") is None:
-            time_entry_list[project][date][ticket]["hours"] = time_entry["duration"] / 3600
-        else:
-            time_entry_list[project][date][ticket]["hours"] += time_entry["duration"] / 3600
-        
-        if time_entry_list[project][date][ticket].get("description") is None:
-            description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
-            if "#" in description:
-                description = description[:description.index("#")].strip()
-            time_entry_list[project][date][ticket]["description"] = description
-        else:
-            description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
-            if "#" in description:
-                description = description[:description.index("#")].strip()
-            if description not in time_entry_list[project][date][ticket]["description"]:
-                time_entry_list[project][date][ticket]["description"] += ", " + description
+            if time_entry_list[project][date].get(ticket) is None:
+                time_entry_list[project][date][ticket] = {}
+            
+            if time_entry_list[project][date][ticket].get("hours") is None:
+                time_entry_list[project][date][ticket]["hours"] = time_entry["duration"] / 3600
+            else:
+                time_entry_list[project][date][ticket]["hours"] += time_entry["duration"] / 3600
+            
+            if time_entry_list[project][date][ticket].get("description") is None:
+                description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
+                if "#" in description:
+                    description = description[:description.index("#")].strip()
+                time_entry_list[project][date][ticket]["description"] = description
+            else:
+                description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
+                if "#" in description:
+                    description = description[:description.index("#")].strip()
+                if description not in time_entry_list[project][date][ticket]["description"]:
+                    time_entry_list[project][date][ticket]["description"] += ", " + description
     
     # adjust endtime or starttime if breaks were not taken
     for date in workingtime_by_day_list:
