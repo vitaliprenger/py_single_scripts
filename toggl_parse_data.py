@@ -89,7 +89,7 @@ def get_toggl_time_entries(start_date, end_date):
         
         # Eucon Jira Logic - seperate Eucon cases into Ticket-ID
         euc_ticket_string_reg = r"^\w+-\d+ - "
-        if "2779 Produktmanagement" in project:
+        if "2779 " in project:
             match = re.search(r"^\w+-\d+", time_entry["description"], re.IGNORECASE)
             if match:
                 ticket = match.group(0)

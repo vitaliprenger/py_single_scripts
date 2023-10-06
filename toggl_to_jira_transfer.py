@@ -51,7 +51,7 @@ def add_missing_entries_for_eucon (timeEntryList, jiraWorklogList):
         }
     )
     for project in timeEntryList:
-        if "2779 Produkt" in project:
+        if "2779 " in project:
             for date in timeEntryList[project]:
                 for ticket in timeEntryList[project][date]:
                     if (jiraWorklogList.get(date) is None or jiraWorklogList[date].get(ticket) is None or jiraWorklogList[date][ticket] != timeEntryList[project][date][ticket]["hours"]) and ticket != "hours" and ticket != "description":
