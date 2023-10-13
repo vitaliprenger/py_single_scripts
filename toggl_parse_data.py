@@ -28,6 +28,7 @@ def get_toggl_time_entries(start_date, end_date):
 
     time_entry_list = {}
     workingtime_by_day_list = {}
+    time_entry_list_detail = {}
     # json structure {'id': 2820044493, 'workspace_id': 3242752, 'project_id': 149577627, 'task_id': None, 'billable': False, 'start': '2023-01-27T13:15:34+00:00', 'stop': '2023-01-27T14:00:34Z', 'duration': 2700, 'description': 'Recherche crisp-dm | asum-dm', 'tags': None, 'tag_ids': None, 'duronly': True, 'at': '2023-01-27T13:59:06+00:00', 'server_deleted_at': None, ...}
     for time_entry in time_response.json():
         # skip entries with negative duration -> current running entries
@@ -42,13 +43,15 @@ def get_toggl_time_entries(start_date, end_date):
         # create project entry if missing
         if time_entry_list.get(project) is None:
             time_entry_list[project] = {}
+            time_entry_list_detail[project] = {}
             
         startdatetime = datetime.strptime(time_entry["start"], "%Y-%m-%dT%H:%M:%S%z").astimezone(ZoneInfo('Europe/Berlin'))
         stopdatetime = datetime.strptime(time_entry["stop"], "%Y-%m-%dT%H:%M:%S%z").astimezone(ZoneInfo('Europe/Berlin'))
-        date = startdatetime.date()
-        day = date.day
+        date = str(startdatetime.date())
+        day = startdatetime.date().day
         if time_entry_list[project].get(date) is None:
             time_entry_list[project][date] = {}
+            time_entry_list_detail[project][date] = {}
         
         if time_entry_list[project][date].get("hours") is None:
                 time_entry_list[project][date]["hours"] = time_entry["duration"] / 3600
@@ -98,23 +101,29 @@ def get_toggl_time_entries(start_date, end_date):
         
             if time_entry_list[project][date].get(ticket) is None:
                 time_entry_list[project][date][ticket] = {}
+                time_entry_list_detail[project][date][ticket] = {}
             
             if time_entry_list[project][date][ticket].get("hours") is None:
                 time_entry_list[project][date][ticket]["hours"] = time_entry["duration"] / 3600
             else:
                 time_entry_list[project][date][ticket]["hours"] += time_entry["duration"] / 3600
             
+            description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
             if time_entry_list[project][date][ticket].get("description") is None:
-                description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
                 if "#" in description:
                     description = description[:description.index("#")].strip()
                 time_entry_list[project][date][ticket]["description"] = description
             else:
-                description = re.sub(euc_ticket_string_reg, "", time_entry["description"])
                 if "#" in description:
                     description = description[:description.index("#")].strip()
                 if description not in time_entry_list[project][date][ticket]["description"]:
                     time_entry_list[project][date][ticket]["description"] += ", " + description
+            
+            # Logic for detail worklog list
+            if time_entry_list_detail[project][date][ticket].get(description) is None:
+                time_entry_list_detail[project][date][ticket][description] = time_entry["duration"] / 3600
+            else:
+                time_entry_list_detail[project][date][ticket][description] += time_entry["duration"] / 3600
     
     # adjust endtime or starttime if breaks were not taken
     for date in workingtime_by_day_list:
@@ -144,4 +153,4 @@ def get_toggl_time_entries(start_date, end_date):
                 workingtime_by_day_list[date]["endtime"] = workingtime_by_day_list[date]["endtime"] + timedelta(hours=diff)
     
     # pickle.dump(time_entry_list, open("time_entry_list.pickle", "wb"))
-    return (time_entry_list, workingtime_by_day_list)
+    return (time_entry_list, workingtime_by_day_list, time_entry_list_detail)

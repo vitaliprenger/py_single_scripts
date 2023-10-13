@@ -14,7 +14,7 @@ def update_entries_in_anw (time_entry_list, file_path, workingtime_by_day_list):
     wb = load_workbook(file_path)
     anw = wb["ANW"]
     
-    # enter working hours 
+    # enter working hours
     for project in time_entry_list:
         logging.debug("project: " + project)
         
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))
         
-    time_entry_list, workingtime_by_day_list = get_toggl_time_entries(start_date, end_date)
+    time_entry_list, workingtime_by_day_list, time_entry_list_detail = get_toggl_time_entries(start_date, end_date)
 
     # time_entry_list = pickle.load(open("time_entry_list.pickle", "rb"))
     

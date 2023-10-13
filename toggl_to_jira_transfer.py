@@ -98,7 +98,7 @@ if __name__ == '__main__':
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))
     
-    time_entry_list, workingtime_by_day_list = get_toggl_time_entries(start_date, end_date)
+    time_entry_list, workingtime_by_day_list, time_entry_list_detail = get_toggl_time_entries(start_date, end_date)
 
     # time_entry_list = pickle.load(open("timeEntryList.pickle", "rb"))
     
