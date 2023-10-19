@@ -29,14 +29,15 @@ def get_eucon_jira_worklog_list(start_date, end_date):
         worklogs = jira.worklogs(issue)
         for worklog in worklogs:
             worklogDate = datetime.strptime(worklog.started[:worklog.started.index("T")], '%Y-%m-%d').date()
+            worklogDateStr = str(worklogDate)
             if hasattr(worklog.author, 'emailAddress') and worklog.author.emailAddress == config.jira_user \
                     and start_date <= worklogDate <= end_date:
                 
-                if jiraWorklogList.get(worklogDate) is None:
-                    jiraWorklogList[worklogDate] = {}
+                if jiraWorklogList.get(worklogDateStr) is None:
+                    jiraWorklogList[worklogDateStr] = {}
                 
-                if jiraWorklogList[worklogDate].get(issue.key) is None: # type: ignore
-                    jiraWorklogList[worklogDate][issue.key] = worklog.timeSpentSeconds / 3600 # type: ignore
+                if jiraWorklogList[worklogDateStr].get(issue.key) is None: # type: ignore
+                    jiraWorklogList[worklogDateStr][issue.key] = worklog.timeSpentSeconds / 3600 # type: ignore
     
     # pickle.dump(jiraWorklogList, open("jiraWorklogList.pickle", "wb"))
     return jiraWorklogList
@@ -56,6 +57,9 @@ def add_missing_entries_for_eucon (timeEntryList, jiraWorklogList):
                 for ticket in timeEntryList[project][date]:
                     if (jiraWorklogList.get(date) is None or jiraWorklogList[date].get(ticket) is None or jiraWorklogList[date][ticket] != timeEntryList[project][date][ticket]["hours"]) and ticket != "hours" and ticket != "description":
                         
+                        tmp1 = jiraWorklogList[date][ticket]
+                        tmp2 = timeEntryList[project][date][ticket]["hours"]
+                        
                         hours = timeEntryList[project][date][ticket]["hours"]
                         desc = timeEntryList[project][date][ticket]["description"]
                         if jiraWorklogList.get(date) is not None and jiraWorklogList[date].get(ticket) is not None and \
@@ -67,9 +71,9 @@ def add_missing_entries_for_eucon (timeEntryList, jiraWorklogList):
                             if answer != "y":
                                 continue
                         # add missing entry to Jira
-                        logging.info("Adding missing entry for " + ticket + " on " + str(date) + " with " + str(hours) + "h")
+                        logging.info("Adding missing entry for " + ticket + " on " + date + " with " + str(hours) + "h")
                         # date to datetime with timezone
-                        datetime_with_zone = datetime.strptime(date.strftime("%Y-%m-%d") + "T00:00:00.000+0100", '%Y-%m-%dT%H:%M:%S.000%z')
+                        datetime_with_zone = datetime.strptime(date + "T00:00:00.000+0100", '%Y-%m-%dT%H:%M:%S.000%z')
                         jira.add_worklog(ticket, timeSpentSeconds = hours * 3600, started=datetime_with_zone, comment=desc)
 
 
