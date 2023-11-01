@@ -52,7 +52,7 @@ if __name__ == '__main__':
    # for project in projects:
    #    print(project) 
       
-   path = 'C:/Users/vitali_prenger_ext/repos'
+   path = '/mnt/c/proj/euc'
    print(path)
    
    # group = gl.groups.get(158) # 160 = SSIS-Pakete # 158 = Team-Data

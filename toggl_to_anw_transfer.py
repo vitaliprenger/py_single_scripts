@@ -1,10 +1,8 @@
 from toggl_parse_data import get_toggl_time_entries
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from zoneinfo import ZoneInfo
-from base64 import b64encode
-import requests
+from dateutil import parser
 from openpyxl import load_workbook
 import os
 
@@ -41,31 +39,31 @@ def update_entries_in_anw (time_entry_list, file_path, workingtime_by_day_list):
             raise KeyError("project '" + str(project) + "' not found in excel")
         
         
-        for date in time_entry_list[project]:
-            logging.debug("date: " + str(date))
-            logging.debug("hours: " + str(time_entry_list[project][date]["hours"]))
+        for date_str in time_entry_list[project]:
+            logging.debug("date: " + date_str)
+            logging.debug("hours: " + str(time_entry_list[project][date_str]["hours"]))
             
             row_offset = 5
             
-            day = date.day
+            day =  parser.parse(date_str).day
             
-            anw.cell(row = day + row_offset, column=project_col).value = time_entry_list[project][date]["hours"]
+            anw.cell(row = day + row_offset, column=project_col).value = time_entry_list[project][date_str]["hours"]
     
     # working times per day       
-    for date in workingtime_by_day_list:
-        logging.debug("date: " + str(date))
-        logging.debug("hours: " + str(workingtime_by_day_list[date]))
+    for date_str in workingtime_by_day_list:
+        logging.debug("date: " + str(date_str))
+        logging.debug("hours: " + str(workingtime_by_day_list[date_str]))
         
         row_offset = 5
         
-        day = date.day
-        if  workingtime_by_day_list[date]["endtime"].hour == 0:
+        day = parser.parse(date_str).day
+        if  workingtime_by_day_list[date_str]["endtime"].hour == 0:
             hour = 24
         else:
-            hour = int(workingtime_by_day_list[date]["endtime"].strftime("%H"))
+            hour = int(workingtime_by_day_list[date_str]["endtime"].strftime("%H"))
         
-        anw.cell(row = day + row_offset, column=3).value = workingtime_by_day_list[date]["starttime"].hour + workingtime_by_day_list[date]["starttime"].minute/100
-        anw.cell(row = day + row_offset, column=4).value = hour + workingtime_by_day_list[date]["endtime"].minute/100
+        anw.cell(row = day + row_offset, column=3).value = workingtime_by_day_list[date_str]["starttime"].hour + workingtime_by_day_list[date_str]["starttime"].minute/100
+        anw.cell(row = day + row_offset, column=4).value = hour + workingtime_by_day_list[date_str]["endtime"].minute/100
                     
     wb.save(file_path.replace(".xlsx", "") + "n.xlsx")
 
