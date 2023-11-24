@@ -68,7 +68,7 @@ def add_missing_entries_for_eucon (timeEntryList, jiraWorklogList):
                             if answer != "y":
                                 continue
                         # add missing entry to Jira
-                        logging.info("Adding missing entry for " + ticket + " on " + date + " with " + str(hours) + "h")
+                        logging.info("Adding missing entry on " + date + " with " + str(hours) + "h for " + ticket )
                         # date to datetime with timezone
                         datetime_with_zone = datetime.strptime(date + "T00:00:00.000+0100", '%Y-%m-%dT%H:%M:%S.000%z')
                         jira.add_worklog(ticket, timeSpentSeconds = hours * 3600, started=datetime_with_zone, comment=desc)
