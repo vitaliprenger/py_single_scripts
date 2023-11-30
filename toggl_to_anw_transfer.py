@@ -93,8 +93,8 @@ if __name__ == '__main__':
     
     # check if file_path exists
     if not os.path.isfile(folder + file):
-        # if not, check if file_path of last month exists
-        start_date_new = start_date - relativedelta(months=1)	
+        # if not, check if file_path of current month exists
+        start_date_new = start_date + relativedelta(months=1)
         file_month_before = "Anw_PrV_" + str(start_date_new.year) + str(start_date_new.month).zfill(2) + ".xlsx"
         if os.path.isfile(folder + file_month_before):
             file = file_month_before
