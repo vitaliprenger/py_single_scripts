@@ -95,7 +95,7 @@ def get_toggl_time_entries(start_date, end_date):
         if "2779 " in project:
             match = re.search(r"^\w+-\d+", time_entry["description"], re.IGNORECASE)
             if match:
-                ticket = match.group(0)
+                ticket = match.group(0).upper()
             else:
                 raise Exception("-- Description '" + str(time_entry["description"]) + "' has no ticket id --")
         

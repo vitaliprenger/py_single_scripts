@@ -9,11 +9,13 @@ def printDoneTasks (timeEntryList):
     
     doneListSummed = {}
     doneListByTicket = {}
+    hoursSum = 0
     for project in timeEntryList:
         if "2779 " in project:
             for date in timeEntryList[project]:
                 for ticket in timeEntryList[project][date]:
                     for description, hours in timeEntryList[project][date][ticket].items():
+                            
                         if doneListSummed.get(ticket) is None:
                             doneListSummed[ticket] = {}
                         if doneListSummed[ticket].get("hours") is None:
@@ -29,15 +31,18 @@ def printDoneTasks (timeEntryList):
                             doneListByTicket[ticket][description] = hours
                         else:
                             doneListByTicket[ticket][description] += hours
+                        
+                        hoursSum += hours
     
-    sorted_tickets = sorted(doneListSummed.items(), key=lambda x: x[1]["hours"], reverse=True)
+    print(f"--------- Sort by Time Spend -----------------------------------------")
+    sorted_tickets = sorted(doneListSummed.items(), key=lambda x: x[1]["hours"], reverse=True) # sorted by hours
     for key, value in sorted_tickets:
         ticket = doneListByTicket[key]
         sorted_dates = sorted(ticket.items(), key=lambda x: x[1], reverse=True)
-        print(f"--------------------------------------------------")
         print(f"{key}: {value['hours']}h")
-        for key_desc, value_desc in sorted_dates:
-            print(f"-- {value_desc}h - {key_desc}")
+        # for key_desc, value_desc in sorted_dates:
+        #     print(f"-- {value_desc}h - {key_desc}")
+    print("Gesamtstunden: " + str(hoursSum) + " h")
         
 
 if __name__ == '__main__':
@@ -58,7 +63,7 @@ if __name__ == '__main__':
     
     # start_date = date(2023, 9, 1)
     # set start date to first day of previous month
-    start_date = date.today() - relativedelta(weeks=1)
+    start_date = date.today() - relativedelta(months=1)
     
     end_date = datetime.now().date() #+ relativedelta(days=1)
     logging.debug("Start Date: " + str(start_date))
