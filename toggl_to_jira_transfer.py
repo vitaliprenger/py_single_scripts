@@ -38,13 +38,15 @@ def get_eucon_jira_worklog_list(start_date, end_date):
                 
                 if jiraWorklogList[worklogDateStr].get(issue.key) is None: # type: ignore
                     jiraWorklogList[worklogDateStr][issue.key] = worklog.timeSpentSeconds / 3600 # type: ignore
+                else:
+                    jiraWorklogList[worklogDateStr][issue.key] += worklog.timeSpentSeconds / 3600
     
     # pickle.dump(jiraWorklogList, open("jiraWorklogList.pickle", "wb"))
     return jiraWorklogList
 
 def delete_worklogs_for_ticket_and_date(jira, ticket, date_to_delete):
     issue = jira.issue(ticket, fields='worklog')
-    worklogs = issue.fields.worklog.worklogs
+    worklogs = jira.worklogs(issue)
     for worklog in worklogs:
         worklog_date = worklog.started[:10]
         worklog_author_email = worklog.author.emailAddress if hasattr(worklog.author, 'emailAddress') else None
@@ -53,7 +55,7 @@ def delete_worklogs_for_ticket_and_date(jira, ticket, date_to_delete):
             worklog.delete(adjustEstimate="leave")
             foundSome = True
         if foundSome:
-            logging.info("Delete       entries on " + worklog.started[:10] + " with " + str(worklog.timeSpentSeconds / 3600) + "h for " + ticket )
+            logging.info("Delete       entrie  on " + worklog.started[:10] + " with " + str(worklog.timeSpentSeconds / 3600) + "h for " + ticket )
 
 def add_missing_entries_for_eucon (timeEntryList, jiraWorklogList):
     # add missing entries to Jira
@@ -80,9 +82,10 @@ def add_missing_entries_for_eucon (timeEntryList, jiraWorklogList):
                             logging.info("Wrong time in Jira. toggl: " + str(hours) + "h, Jira: " + str(hours_jira) + "h. " + ticket + " on " + str(date))
                             answer = input("Should the entry nevertheless be added? the existing entries will be deleted beforhand. (y/n): ")
                             if answer != "y":
+                                continue
+                            if answer == "y":
                                 # Before adding new entries, delete existing worklogs for the ticket on that date if any exist
                                 delete_worklogs_for_ticket_and_date(jira, ticket, date)
-                                continue
                         # add missing entry to Jira
                         logging.info("Adding missing entry on " + date + " with " + str(hours) + "h for " + ticket )
                         # date to datetime with timezone
