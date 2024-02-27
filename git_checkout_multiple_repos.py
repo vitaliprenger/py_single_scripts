@@ -21,7 +21,14 @@ def fetch_projects(group):
                 print(f"Cloning {name_tech}...")
                 subprocess.call(['git', 'clone', git_url, project_path])
             else:
-                print(f"Skipping {name_tech} as it's already cloned.")
+                print(f"Repository {name_tech} already exists, updating...")
+                os.chdir(project_path)  # Change directory to project_path
+                # Check if any branch is currently checked out
+                branch_output = subprocess.check_output(['git', 'branch', '--show-current']).decode().strip()
+                if branch_output == '':
+                    # No branch is checked out, checkout master
+                    subprocess.call(['git', 'checkout', 'master'])
+                subprocess.call(['git', 'pull'])  # Pull from current branch or master
 
         page += 1
 
@@ -42,12 +49,13 @@ if __name__ == '__main__':
    projects = gl.projects.list(iterator=True)  
       
 
-#    path = 'C:\\Users\\vitali_prenger\\repos'
-   path = 'C:\\Users\\vitali_prenger_ext\\repos'
-#    path = '/mnt/c/proj/euc'
+#    path = 'C:\\Users\\vitali_prenger\\repos' -- 
+#    path = 'C:\\Users\\vitali_prenger_ext\\repos' -- ssis vm
+   path = '/mnt/c/proj/euc' # Laptop Vit
    print(path)
    
-   group = gl.groups.get(170) # 160 = SSIS-Pakete # 158 = Team-Data # 170 = SSRS-Berichte
+   # 160 = SSIS-Pakete # 170 = SSRS-Berichte # 158 = Team-Data  # 1513 = Databases # 179 = Datenlieferung
+   group = gl.groups.get(179) 
    subfolder = group.path
    
    fetch_projects(group)

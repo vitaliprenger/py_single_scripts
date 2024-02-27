@@ -11,13 +11,19 @@ def get_toggl_time_entries(start_date, end_date):
     # apiAUth = b64encode(bytes(config.toggl_cred + ":api_token", 'ascii')).decode("ascii") # alternative to api_token
     headers = { 'Authorization' : 'Basic %s' %  api_auth }
 
+    # Request Clients
+    client_list = {}
+    response = requests.get('https://api.track.toggl.com/api/v9/me/clients', headers=headers)
+    for client in response.json():
+        if client_list.get(client["id"]) is None:
+            client_list[client["id"]] = client["name"]
 
     # request project_list
     project_list = {}
     response = requests.get('https://api.track.toggl.com/api/v9/me/projects', headers=headers)
     for project in response.json():
         if project_list.get(project["id"]) is None:
-            project_list[project["id"]] = project["name"]
+            project_list[project["id"]] = {"name" : project["name"], "client_id" : project["client_id"]}
 
 
     # request time entries for start_date to end_date
@@ -33,12 +39,13 @@ def get_toggl_time_entries(start_date, end_date):
     for time_entry in time_response.json():
         # skip entries with negative duration -> current running entries
         # skip entries with $ in description -> entries with $ are were done by other persons
-        if time_entry["duration"] < 0 or "$" in time_entry["description"]:
+        if time_entry["duration"] < 0 or "$" in time_entry["description"] \
+                or client_list[project_list[time_entry["project_id"]]["client_id"]] == "Vit": # nicht die eigenen Projekte
             continue
         if "reisen" not in time_entry["description"].lower():
-            project = project_list[time_entry["project_id"]]
+            project = project_list[time_entry["project_id"]]["name"]
         else:
-            project = project_list[time_entry["project_id"]] + " - Reisen"
+            project = project_list[time_entry["project_id"]]["name"] + " - Reisen"
         
         # create project entry if missing
         if time_entry_list.get(project) is None:
