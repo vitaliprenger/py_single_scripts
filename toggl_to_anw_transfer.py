@@ -1,4 +1,4 @@
-from toggl_parse_data import get_toggl_time_entries
+from helper.toggl_parse_data import get_toggl_time_entries
 import logging
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta

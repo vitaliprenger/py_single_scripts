@@ -1,11 +1,9 @@
-import config
-from toggl_parse_data import get_toggl_time_entries
+import helper.config as config
+from helper.toggl_parse_data import get_toggl_time_entries
 import logging
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from base64 import b64encode
-import requests
-import re
 from jira import JIRA
 
 jira_url = "https://eucon.atlassian.net"

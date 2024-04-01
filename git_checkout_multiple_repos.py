@@ -1,4 +1,4 @@
-import config
+import helper.config as config
 import gitlab
 import subprocess
 import os
@@ -55,7 +55,7 @@ if __name__ == '__main__':
    print(path)
    
    # 160 = SSIS-Pakete # 170 = SSRS-Berichte # 158 = Team-Data  # 1513 = Databases # 179 = Datenlieferung
-   group = gl.groups.get(179) 
+   group = gl.groups.get(160) 
    subfolder = group.path
    
    fetch_projects(group)

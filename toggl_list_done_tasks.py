@@ -1,4 +1,4 @@
-from toggl_parse_data import get_toggl_time_entries
+from helper.toggl_parse_data import get_toggl_time_entries
 import logging
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
@@ -63,9 +63,9 @@ if __name__ == '__main__':
     
     # start_date = date(2023, 9, 1)
     # set start date to first day of previous month
-    start_date = date.today() - relativedelta(months=1)
+    start_date = date.today().replace(day=1) - relativedelta(months=1)
     
-    end_date = datetime.now().date() #+ relativedelta(days=1)
+    end_date = datetime.now().date().replace(day=1) #+ relativedelta(days=1)
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))
     

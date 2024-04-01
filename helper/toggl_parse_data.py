@@ -1,9 +1,10 @@
-import config
+import helper.config as config
 import requests, re, logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from base64 import b64encode
 
+# this function reads the data from the toggl service and stores them in a python dictionary data structure
 def get_toggl_time_entries(start_date, end_date):
     logging.info("get toggl time entries for " + str(start_date) + " to " + str(end_date))
     # prepare headers
