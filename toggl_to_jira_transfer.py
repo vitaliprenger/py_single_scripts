@@ -53,7 +53,7 @@ def delete_worklogs_for_ticket_and_date(jira, ticket, date_to_delete):
             worklog.delete(adjustEstimate="leave")
             foundSome = True
         if foundSome:
-            logging.info("Delete       entrie  on " + worklog.started[:10] + " with " + str(worklog.timeSpentSeconds / 3600) + "h for " + ticket )
+            logging.info("Delete         entry on " + worklog.started[:10] + " with " + str(worklog.timeSpentSeconds / 3600) + "h for " + ticket )
 
 def add_missing_entries_for_eucon (timeEntryList, jiraWorklogList):
     # add missing entries to Jira
