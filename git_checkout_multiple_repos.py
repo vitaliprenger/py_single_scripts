@@ -13,22 +13,23 @@ def fetch_projects(group):
             break
 
         for project in projects:
-            git_url = project.http_url_to_repo
-            name_tech = project.path
-            project_path = os.path.join(path, subfolder, name_tech + '.git')
+            if project.attributes['archived'] == False:
+                git_url = project.http_url_to_repo
+                name_tech = project.path
+                project_path = os.path.join(path, subfolder, name_tech + '.git')
 
-            if not os.path.exists(project_path):
-                print(f"Cloning {name_tech}...")
-                subprocess.call(['git', 'clone', git_url, project_path])
-            else:
-                print(f"Repository {name_tech} already exists, updating...")
-                os.chdir(project_path)  # Change directory to project_path
-                # Check if any branch is currently checked out
-                branch_output = subprocess.check_output(['git', 'branch', '--show-current']).decode().strip()
-                if branch_output == '':
-                    # No branch is checked out, checkout master
-                    subprocess.call(['git', 'checkout', 'master'])
-                subprocess.call(['git', 'pull'])  # Pull from current branch or master
+                if not os.path.exists(project_path):
+                    print(f"Cloning {name_tech}...")
+                    subprocess.call(['git', 'clone', git_url, project_path])
+                else:
+                    print(f"Repository {name_tech} already exists, updating...")
+                    os.chdir(project_path)  # Change directory to project_path
+                    # Check if any branch is currently checked out
+                    branch_output = subprocess.check_output(['git', 'branch', '--show-current']).decode().strip()
+                    if branch_output == '':
+                        # No branch is checked out, checkout master
+                        subprocess.call(['git', 'checkout', 'master'])
+                    subprocess.call(['git', 'pull'])  # Pull from current branch or master
 
         page += 1
 
@@ -55,7 +56,7 @@ if __name__ == '__main__':
    print(path)
    
    # 160 = SSIS-Pakete # 170 = SSRS-Berichte # 158 = Team-Data  # 1513 = Databases # 179 = Datenlieferung
-   group = gl.groups.get(160) 
+   group = gl.groups.get(170) 
    subfolder = group.path
    
    fetch_projects(group)
