@@ -114,3 +114,8 @@ if __name__ == '__main__':
     update_entries_in_anw(time_entry_list, folder + file, workingtime_by_day_list)
     
     logging.info("Finished Toggl to Anw Transfer")
+    
+    # open created file
+    # Convert the WSL path to a Windows path
+    windows_path = (folder + file).replace('/', '\\').replace('\\mnt\\c', 'C:')
+    os.system(f'explorer.exe "{windows_path.replace(".xlsx", "") + "n.xlsx"}"')
