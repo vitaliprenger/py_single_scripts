@@ -18,10 +18,10 @@ def update_entries_in_anw (time_entry_list, file_path, workingtime_by_day_list):
         
         if "reisen" not in project.lower():
             col_start = 8
-            col_end = 34
+            col_end = 37
         else:
-            col_start = 36
-            col_end = 40
+            col_start = 39
+            col_end = 43
         
         project_col = -1
         excel_proj = "empty"
