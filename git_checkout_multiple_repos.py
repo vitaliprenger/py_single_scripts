@@ -4,7 +4,7 @@ import subprocess
 import os
 import shutil  # Import shutil for deleting directories
 
-def fetch_projects(group):
+def fetch_projects(group, fetch_subfolder):
     page = 1
     per_page = 100
 
@@ -15,7 +15,7 @@ def fetch_projects(group):
 
         for project in projects:
             with_archived_projects = False
-            project_path = os.path.join(path, subfolder, project.path + '.git')
+            project_path = os.path.join(path, fetch_subfolder, project.path + '.git')
             
             if with_archived_projects or project.attributes['archived'] == False:
                 git_url = project.http_url_to_repo
@@ -42,7 +42,9 @@ def fetch_projects(group):
     subgroups = group.subgroups.list()
     for subgroup in subgroups:
         print(f"Fetching projects from subPgroup: {subgroup.name}")
-        fetch_projects(subgroup)
+        new_group = gl.groups.get(subgroup.id)
+        new_subfolder = subgroup.path
+        fetch_projects(new_group, new_subfolder)
 
 
 if __name__ == '__main__':
@@ -61,9 +63,9 @@ if __name__ == '__main__':
    path = '/mnt/c/proj/euc' # Laptop Vit
    print(path)
    
-   # 160 = SSIS-Pakete # 170 = SSRS-Berichte # 158 = Team-Data  # 1513 = Databases # 179 = Datenlieferung
-   group = gl.groups.get(160) 
+   # 160 = SSIS-Pakete # 170 = SSRS-Berichte # 158 = Team-Data  # 1513 = Databases # 179 = Datenlieferung # 159 = PowerBI
+   group = gl.groups.get(159) 
    subfolder = group.path
    
-   fetch_projects(group)
+   fetch_projects(group, subfolder)
 
