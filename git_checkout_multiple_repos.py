@@ -60,12 +60,13 @@ if __name__ == '__main__':
     # Uncomment the appropriate path based on your environment
 #    path = 'C:\\Users\\vitali_prenger\\repos' -- 
 #    path = 'C:\\Users\\vitali_prenger_ext\\repos' -- ssis vm
-   path = '/mnt/c/proj/euc' # Laptop Vit
+#    path = '/mnt/c/proj/euc' # Laptop Vit WSL
+   path = 'C:\\proj\\euc' # Laptop Vit Windows
    print(path)
    
    # 160 = SSIS-Pakete # 170 = SSRS-Berichte # 158 = Team-Data  # 1513 = Databases # 179 = Datenlieferung # 159 = PowerBI
-   group = gl.groups.get(159) 
-   subfolder = group.path
+   group = gl.groups.get(160) 
+   subfolder = "PD_" + group.path
    
    fetch_projects(group, subfolder)
 
