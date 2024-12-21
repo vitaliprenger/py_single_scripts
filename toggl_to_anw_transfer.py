@@ -6,149 +6,133 @@ from dateutil.relativedelta import relativedelta
 from dateutil import parser
 from openpyxl import load_workbook
 import xlwings as xw
+import debugpy
 import os, sys
 import shutil
 import re
 
 from helper.toggl_parse_data import get_toggl_time_entries
    
-def update_entries_in_anw (time_entry_list, folder, file, file_new, workingtime_by_day_list):
-    logging.info("update entries in anw")
-    wb = load_workbook(folder + file)
-    anw = wb["ANW"]
-    
-    # Enter working hours
-    for project in time_entry_list:
-        logging.debug("project: " + project)
-        
-        switch_col_number = -1
-        for col in range(8,100):
-            if anw.cell(row=4, column=col).value == "angerechn. Reisezeit":
-                switch_col_number = col
-                break
-            
-        if switch_col_number == -1:
-            logging.error("Column ""angerechn. Reisezeit"" not found in row 4 of the ANW")
-            raise KeyError("Column ""angerechn. Reisezeit"" not found in row 4 of the ANW")
-        
-        if "reisen" not in project.lower():
-            col_start = 8
-            col_end = switch_col_number - 1
-        else:
-            col_start = switch_col_number + 1
-            col_end = 43
-        
-        project_col = -1
-        excel_proj = "empty"
-        
-        for col in range(col_start, col_end):
-            if anw.cell(row=4, column=col).value is None or anw.cell(row=4, column=col).value == "":
-                continue
-            excel_proj = anw.cell(row=4, column=col).value[:4] # type: ignore
-            if excel_proj == project[:4]:
-                project_col = col
-                break
-        
-        if project_col == -1 or excel_proj != project[:4]:
-            logging.error("project '" + str(project) + "' not found in excel")
-            raise KeyError("project '" + str(project) + "' not found in excel")
-        
-        
-        for date_str in time_entry_list[project]:
-            logging.debug("date: " + date_str)
-            logging.debug("hours: " + str(time_entry_list[project][date_str]["hours"]))
-            
-            row_offset = 5
-            
-            day =  parser.parse(date_str).day
-            
-            anw.cell(row = day + row_offset, column=project_col).value = time_entry_list[project][date_str]["hours"]
-    
-    # Working times per day       
-    for date_str in workingtime_by_day_list:
-        logging.debug("date: " + str(date_str))
-        logging.debug("hours: " + str(workingtime_by_day_list[date_str]))
-        
-        row_offset = 5
-        
-        day = parser.parse(date_str).day
-        if  workingtime_by_day_list[date_str]["endtime"].hour == 0:
-            hour = 24
-        else:
-            hour = int(workingtime_by_day_list[date_str]["endtime"].strftime("%H"))
-        
-        anw.cell(row = day + row_offset, column=3).value = workingtime_by_day_list[date_str]["starttime"].hour + workingtime_by_day_list[date_str]["starttime"].minute/100
-        anw.cell(row = day + row_offset, column=4).value = hour + workingtime_by_day_list[date_str]["endtime"].minute/100
-                    
-    wb.save(folder + file_new)
-
 def update_entries_in_anw_new (time_entry_list, folder, file, workingtime_by_day_list):
     logging.debug("In update_entries_in_anw_new")
-    wb = xw.Book(file)
+    
+    with xw.Book(folder + file) as wb:
+        anw = wb.sheets["ANW"]
+        
+        last_row_before_days_of_month = 4 # days of month start after row 5 (or 4 in xlwings)
+        
+        # Enter working hours
+        for project in time_entry_list:
+            logging.debug("project: " + project)
+            
+            anw_project_column_start = 7 # H column
+            anw_project_title_row = 3 # row 4 because xlwings starts with 0
+            switch_col_number = -1
+            for col in range(anw_project_column_start,100):
+                if anw[anw_project_title_row, col].value == "angerechn. Reisezeit":
+                    switch_col_number = col
+                    break
+                
+            if switch_col_number == -1:
+                logging.error("Column ""angerechn. Reisezeit"" not found in row 4 of the ANW")
+                raise KeyError("Column ""angerechn. Reisezeit"" not found in row 4 of the ANW")
+            
+            if "reisen" not in project.lower():
+                col_start = anw_project_column_start
+                col_end = switch_col_number - 1
+            else:
+                col_start = switch_col_number + 1
+                col_end = 43
+            
+            project_col = -1
+            excel_proj = "empty"
+            
+            for col in range(col_start, col_end):
+                if anw[anw_project_title_row, col].value is None or anw[anw_project_title_row, col].value == "":
+                    continue
+                excel_proj = anw[anw_project_title_row, col].value[:4] # type: ignore
+                if excel_proj == project[:4]:
+                    project_col = col
+                    break
+            
+            if project_col == -1 or excel_proj != project[:4]:
+                logging.error("project '" + str(project) + "' not found in excel")
+                raise KeyError("project '" + str(project) + "' not found in excel")
+            
+            
+            for date_str in time_entry_list[project]:
+                logging.debug("date: " + date_str)
+                logging.debug("hours: " + str(time_entry_list[project][date_str]["hours"]))
+                
+                
+                day =  parser.parse(date_str).day
+                
+                anw[last_row_before_days_of_month + day, project_col].value = time_entry_list[project][date_str]["hours"]
+        
+        # Working times per day
+        for date_str in workingtime_by_day_list:
+            logging.debug("date: " + str(date_str))
+            logging.debug("hours: " + str(workingtime_by_day_list[date_str]))
+            
+            day = parser.parse(date_str).day
+            if  workingtime_by_day_list[date_str]["endtime"].hour == 0:
+                hour = 24
+            else:
+                hour = int(workingtime_by_day_list[date_str]["endtime"].strftime("%H"))
+            
+            anw[last_row_before_days_of_month + day, 2].value = workingtime_by_day_list[date_str]["starttime"].hour + workingtime_by_day_list[date_str]["starttime"].minute/100
+            anw[last_row_before_days_of_month + day, 3].value = hour + workingtime_by_day_list[date_str]["endtime"].minute/100
+                        
+        wb.save()
+        
+        root = tk.Tk()
+        root.withdraw()  # Hides the main window
+        
+        result = messagebox.askyesno("Confirmation", "Passt alles so? Excel wird dann geschlossen.")
+        if result:
+            logging.info(f'Closing excel file: {file}')
+        else:
+            logging.info("User declined to close excel file")
+            sys.exit()
+        root.destroy()
+    
     logging.debug("End of update_entries_in_anw_new")
 
 # The function to update the cell M1, save the new file, and delete the old one
-def adjust_anw_for_new_month(folder, file, file_new):
-    wb = load_workbook(folder + file, data_only=True)
+def adjust_anws_for_new_month(folder, file, prefix, month, suffix):
+    logging.debug("In adjust_anw_for_new_month")
     
-    # Updating M1
-    m1_value = wb["ANW"]["M1"].value
-    if isinstance(m1_value, datetime):
-        new_value = m1_value + relativedelta(months=1)
-        wb["ANW"]["M1"].value = new_value
-    else:
-        raise ValueError("Cell M1 does not contain a date.")
-    
-    wb.save(folder + file_new)
-    
-    os.remove(folder + file)
-
-    logging.info(f"New file saved: {folder + file_new}")
-    logging.info(f"Old file deleted: {folder + file}")
-    
-def increment_month_in_filename(filename):
-    match = re.search(r'(\d{6})\.xlsx$', filename)
-    if match:
-        date_str = match.group(1)
-        date_obj = datetime.strptime(date_str, "%Y%m")
-        new_date_obj = date_obj + relativedelta(months=1)
-        new_date_str = new_date_obj.strftime("%Y%m")
-        new_filename = filename.replace(date_str, new_date_str)
-        return new_filename
-    else:
-        raise ValueError("Filename does not contain a valid date format")
-
-# Popup function
-def ask_user_confirmation(folder, file_template, file_with_workinghours):
     root = tk.Tk()
     root.withdraw()  # Hides the main window
     
-    file_template_new_month = increment_month_in_filename(file_template)
-    
-    result = messagebox.askyesno("Confirmation", "Do you want to adjust the ANW template for the next month? " + file_template + " will become " 
-                                 + file_template_new_month + ".")
-    
-    if result:
-        logging.info("User confirmed to adjust template for new month")
-        adjust_anw_for_new_month(folder, file, file_template_new_month)
-        
-        result2 = messagebox.askyesno("Confirmation", "Do you want the filled ANW with workinghours to be renamed from " + file_with_workinghours + 
-                                      " to " + file + "?")
-    
-        if  result2:
-            logging.info("User confirmed to rename the file with working hours")
-            os.rename(folder + file_with_workinghours, folder + file)
-            
-        else:
-            logging.info("User declined to rename the file with working hours")
-            
-    else:
-        logging.info("User declined to adjust template for new month")
-    
+    result = messagebox.askyesno("Confirmation", "Sollen die Excel Dateien umbenannt werden?")
+    if not result:
+        logging.info("User declined to rename excel files")
+        sys.exit()
     root.destroy()
+    
+    app = xw.App()
+    file_original = prefix + month + suffix
+    with xw.Book(folder + file_original) as wb:
+        anw = wb.sheets["ANW"]
+        
+        date_obj = anw["M1"].value
+        new_date = date_obj + relativedelta(months=1)
+        anw["M1"].value = new_date
+    
+    new_filename = prefix + new_date.strftime("%Y%m") + suffix
+    # rename original file for new month
+    os.rename(folder + file_original, folder + new_filename)
+    # rename filled file to
+    os.rename(folder + file, folder + file_original)
 
+    logging.info(f"Renamed originnal file: {folder + new_filename}")
+    logging.info(f"Filled nw file '{file}' becase '{file_original}'")
+    
+    app.quit()
+    
 # Function to ask the user to select an Excel file using a list box
-def ask_user_for_file(files):
+def ask_user_to_select_file(files):
     root = tk.Tk()
     root.withdraw()  # Hide the main window
     
@@ -192,12 +176,11 @@ if __name__ == '__main__':
             logging.StreamHandler()
         ]
     )
-    gettrace = getattr(sys, 'gettrace', None)
-    if gettrace():
+    if debugpy.is_client_connected():
         logging.getLogger().setLevel(logging.DEBUG)
 
     logging.info("----------------------------------------")
-    logging.info("Starting Toggl to Jira Transfer")
+    logging.info("Starting Toggl to ANW Transfer")
     logging.debug("Debugging is enabled")
     
     linux_folder = "/mnt/c/Users/PrV/OneDrive - viadee Unternehmensberatung AG/Arbeitsnachweis/"
@@ -211,7 +194,7 @@ if __name__ == '__main__':
 
     # Check if there are multiple Excel files
     if len(excel_files) > 1:
-        file = ask_user_for_file(excel_files)
+        file = ask_user_to_select_file(excel_files)
         if not file:
             raise FileNotFoundError("User did not select a valid file.")
     elif len(excel_files) == 1:
@@ -219,10 +202,10 @@ if __name__ == '__main__':
     else:
         raise FileNotFoundError(f"No Excel files found in folder: {folder}")
         
-    match = re.search(r'Anw_PrV_(\d{6}).*\.xlsx$', file)
+    match = re.search(r'(Anw_PrV_)(\d{6}).*(\.xlsx)$', file)
     matchOrig = re.search(r'Anw_PrV_(\d{6})\.xlsx$', file)
     if match:
-        fileshort = match.group(1)
+        fileshort = match.group(2)
         start_date = datetime.strptime(fileshort, "%Y%m").date().replace(day=1)
     else:
         raise ValueError(f"Filename '{file}' does not match the expected format 'Anw_PrV_YYYYMM*.xlsx'")
@@ -237,16 +220,14 @@ if __name__ == '__main__':
     if matchOrig:
         file_new = file.replace(".xlsx", "n.xlsx")
         # Copy the file before making updates
-        logging.info(f"Copying original Excel '{file}' to '{file_new}'. Existing Files will be replaced.")
-        shutil.copy(folder + file, folder + file_new)
+        try:
+            shutil.copy(folder + file, folder + file_new)
+            logging.info(f"Copied original Excel '{file}' to '{file_new}'. Existing file was replaced.")
+        except IOError:
+            logging.info(f"Original Excel file should not be edited. But new Excel '{file_new}' already exists and is opened. . If it should be replaced, close it and restart Skript.")
+        file = file_new
         
-    # update_entries_in_anw(time_entry_list, folder, file, file, workingtime_by_day_list)
     update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_list)
+    adjust_anws_for_new_month(folder, file, match.group(1), match.group(2), match.group(3))
     
     logging.info("Finished Toggl to Anw Transfer")
-    
-    # open created file
-    logging.info("Opening new filled ANW file " + file)
-    os.system(f'explorer.exe "{windows_folder + file}"')
-    
-    # ask_user_confirmation(folder, file, file_with_workinghours) # formula get lost currently -> not usable. Maybe use xlwings library alternatively
