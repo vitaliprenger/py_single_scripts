@@ -83,6 +83,7 @@ def update_entries_in_anw_new (time_entry_list, folder, file, workingtime_by_day
             anw[last_row_before_days_of_month + day, 2].value = workingtime_by_day_list[date_str]["starttime"].hour + workingtime_by_day_list[date_str]["starttime"].minute/100
             anw[last_row_before_days_of_month + day, 3].value = hour + workingtime_by_day_list[date_str]["endtime"].minute/100
                         
+        new_overtimehours = anw["F42"].value
         wb.save()
         
         root = tk.Tk()
@@ -97,6 +98,7 @@ def update_entries_in_anw_new (time_entry_list, folder, file, workingtime_by_day
         root.destroy()
     
     logging.debug("End of update_entries_in_anw_new")
+    return new_overtimehours
 
 def update_entries_in_anw_with_openpyxl (time_entry_list, file_path, workingtime_by_day_list):
     logging.info("update entries in anw")
@@ -159,7 +161,7 @@ def update_entries_in_anw_with_openpyxl (time_entry_list, file_path, workingtime
     wb.save(file_path.replace(".xlsx", "") + "n.xlsx")
 
 # The function to update the cell M1, save the new file, and delete the old one
-def adjust_anws_for_new_month(folder, file, prefix, month, suffix):
+def adjust_anws_for_new_month(folder, file, prefix, yearmonth, suffix, new_overtimehours):
     logging.debug("In adjust_anw_for_new_month")
     
     root = tk.Tk()
@@ -172,13 +174,15 @@ def adjust_anws_for_new_month(folder, file, prefix, month, suffix):
     root.destroy()
     
     app = xw.App()
-    file_original = prefix + month + suffix
+    file_original = prefix + yearmonth + suffix
     with xw.Book(folder + file_original) as wb:
         anw = wb.sheets["ANW"]
         
         date_obj = anw["M1"].value
         new_date = date_obj + relativedelta(months=1)
         anw["M1"].value = new_date
+        
+        anw["F39"].value = new_overtimehours
     
     new_filename = prefix + new_date.strftime("%Y%m") + suffix
     # rename original file for new month
@@ -209,7 +213,7 @@ def ask_user_to_select_file(files):
     top = tk.Toplevel(root)
     top.title("Select an Excel file")
 
-    tk.Label(top, text="Multiple Excel files found:").pack(pady=5)
+    tk.Label(top, text="Multiple Excel files found.\nWhich should be used as template?").pack(pady=5)
     
     listbox = tk.Listbox(top)
     listbox.pack(padx=10, pady=5)
@@ -289,8 +293,8 @@ if __name__ == '__main__':
     
     on_windows = True;
     if on_windows:
-        update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_list)
-        adjust_anws_for_new_month(folder, file, match.group(1), match.group(2), match.group(3))
+        new_overtimehours = update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_list)
+        adjust_anws_for_new_month(folder, file, match.group(1), match.group(2), match.group(3), new_overtimehours)
     else:
         update_entries_in_anw_with_openpyxl(time_entry_list, folder, file, workingtime_by_day_list)
     
