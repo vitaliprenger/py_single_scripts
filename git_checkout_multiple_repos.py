@@ -64,7 +64,7 @@ if __name__ == '__main__':
    path = 'C:\\proj\\euc' # Laptop Vit Windows
    print(path)
    
-   # 160 = SSIS-Pakete # 170 = SSRS-Berichte # 158 = Team-Data  # 1513 = Databases # 179 = Datenlieferung # 159 = PowerBI
+   # 160 = SSIS-Pakete | 170 = SSRS-Berichte | 158 = Team-Data  | 1513 = Databases | 179 = Datenlieferung | 159 = PowerBI
    group = gl.groups.get(160) 
    subfolder = "PD_" + group.path
    
