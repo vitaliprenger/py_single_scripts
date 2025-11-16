@@ -66,7 +66,7 @@ def fetch_projects(base_path, group, fetch_subfolder, include_archived=False, in
         if subgroup.full_path in ["digital/insurance/team-data", "digital/insurance/team-data-obungi"]: # data groups where old projects are interesting
             fetch_projects(base_path, new_group, new_subfolder, include_archived, True, skipped_old_projects)
         elif subgroup.full_path in ["digital/insurance/predictiveanalytics", "digital/insurance/camunda-hackday", "digital/insurance/choreography",
-                                     "digital/insurance/property", "digital/insurance/car"]: # uninteresting subgroups
+                                     "digital/insurance/property" ]: # uninteresting subgroups - , "digital/insurance/car"
             print(f"Skipping further subgroups under {subgroup.full_path}")
             continue
         else:
@@ -85,9 +85,10 @@ if __name__ == '__main__':
     projects = gl.projects.list(iterator=True)
 
 # Uncomment the appropriate path based on your environment
+#    base_path = 'C:\\proj\\euc' # Laptop Vit Windows
+#    base_path = '/mnt/c/proj/euc' # Laptop Vit WSL
 #    base_path = 'C:\\Users\\vitali_prenger\\repos' -- 
 #    base_path = 'C:\\Users\\vitali_prenger_ext\\repos' -- ssis vm
-#    base_path = '/mnt/c/proj/euc' # Laptop Vit WSL
     # Always map 'digital' to 'C:\\proj\\euc'
     base_path = 'C:\\proj\\euc'
 

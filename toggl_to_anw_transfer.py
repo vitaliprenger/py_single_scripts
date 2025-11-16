@@ -42,7 +42,7 @@ def update_entries_in_anw_new (time_entry_list, folder, file, workingtime_by_day
                 col_end = switch_col_number - 1
             else:
                 col_start = switch_col_number + 1
-                col_end = 43
+                col_end = 50
             
             project_col = -1
             excel_proj = "empty"
@@ -190,8 +190,8 @@ def adjust_anws_for_new_month(folder, file, prefix, yearmonth, suffix, new_overt
     # rename filled file to
     os.rename(folder + file, folder + file_original)
 
-    logging.info(f"Renamed originnal file: {folder + new_filename}")
-    logging.info(f"Filled nw file '{file}' becase '{file_original}'")
+    logging.info(f"Renamed originnal file to {folder + new_filename}")
+    logging.info(f"Renamed Excel '{file}' to '{file_original}'")
     
     app.quit()
     
@@ -254,7 +254,7 @@ if __name__ == '__main__':
     else: # execution probably in windows
         folder = windows_folder
     
-    excel_files = [f for f in os.listdir(folder) if f.endswith('.xlsx')]
+    excel_files = [f for f in os.listdir(folder) if f.endswith('.xlsx') and not f.endswith('n.xlsx')]
 
     # Check if there are multiple Excel files
     if len(excel_files) > 1:
