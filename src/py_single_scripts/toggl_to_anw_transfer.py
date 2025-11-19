@@ -11,7 +11,7 @@ import os, sys
 import shutil
 import re
 
-from helper.toggl_parse_data import get_toggl_time_entries
+from .helper.toggl_parse_data import get_toggl_time_entries
    
 def update_entries_in_anw_new (time_entry_list, folder, file, workingtime_by_day_list):
     logging.debug("In update_entries_in_anw_new")
@@ -204,12 +204,14 @@ def ask_user_to_select_file(files):
     root = tk.Tk()
     root.withdraw()  # Hide the main window
     
+    selected_file = None
+    
     def on_select(event):
+        nonlocal selected_file
         selected_file = listbox.get(listbox.curselection())
-        root.selected_file = selected_file
 
     def on_close():
-        if hasattr(root, 'selected_file'):
+        if selected_file is not None:
             root.destroy()  # Close the window
         else:
             messagebox.showerror("Error", "No file selected. Please try again.")
@@ -232,7 +234,7 @@ def ask_user_to_select_file(files):
     # root.wait_window(top)
     root.mainloop()
     
-    return getattr(root, 'selected_file', None)
+    return selected_file
 
 if __name__ == '__main__':
 
