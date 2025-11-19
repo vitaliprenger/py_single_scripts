@@ -28,9 +28,11 @@ def update_entries_in_anw_new (time_entry_list, folder, file, workingtime_by_day
             anw_project_column_start = 7 # H column
             anw_project_title_row = 3 # row 4 because xlwings starts with 0
             switch_col_number = -1
-            for col in range(anw_project_column_start,100):
-                if anw[anw_project_title_row, col].value == "angerechn. Reisezeit":
-                    switch_col_number = col
+            # Fetch the entire row at once for better performance
+            row_values = anw[anw_project_title_row, anw_project_column_start:100].value
+            for idx, cell_value in enumerate(row_values):
+                if cell_value == "angerechn. Reisezeit":
+                    switch_col_number = anw_project_column_start + idx
                     break
                 
             if switch_col_number == -1:
@@ -47,12 +49,14 @@ def update_entries_in_anw_new (time_entry_list, folder, file, workingtime_by_day
             project_col = -1
             excel_proj = "empty"
             
-            for col in range(col_start, col_end):
-                if anw[anw_project_title_row, col].value is None or anw[anw_project_title_row, col].value == "":
+            # Fetch the entire row at once for better performance
+            row_values = anw[anw_project_title_row, col_start:col_end].value
+            for idx, cell_value in enumerate(row_values):
+                if cell_value is None or cell_value == "":
                     continue
-                excel_proj = anw[anw_project_title_row, col].value[:4] # type: ignore
+                excel_proj = str(cell_value)[:4]
                 if excel_proj == project[:4]:
-                    project_col = col
+                    project_col = col_start + idx
                     break
             
             if project_col == -1 or excel_proj != project[:4]:
