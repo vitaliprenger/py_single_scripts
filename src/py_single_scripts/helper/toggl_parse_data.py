@@ -1,4 +1,7 @@
-import helper.config as config
+try:
+    from . import config
+except ImportError:
+    import config
 import requests, re, logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo

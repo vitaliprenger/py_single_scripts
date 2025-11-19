@@ -11,7 +11,12 @@ import os, sys
 import shutil
 import re
 
-from .helper.toggl_parse_data import get_toggl_time_entries
+# Import handling for both direct execution and module execution
+try:
+    from .helper.toggl_parse_data import get_toggl_time_entries
+except ImportError:
+    # Direct execution fallback
+    from helper.toggl_parse_data import get_toggl_time_entries  # type: ignore
    
 def update_entries_in_anw_new (time_entry_list, folder, file, workingtime_by_day_list):
     logging.debug("In update_entries_in_anw_new")
