@@ -4,7 +4,7 @@ import logging
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from dateutil import parser
-from openpyxl import load_workbook
+# from openpyxl import load_workbook
 import xlwings as xw
 import debugpy
 import os, sys
@@ -100,65 +100,65 @@ def update_entries_in_anw_new (time_entry_list, folder, file, workingtime_by_day
     logging.debug("End of update_entries_in_anw_new")
     return new_overtimehours
 
-def update_entries_in_anw_with_openpyxl (time_entry_list, file_path, workingtime_by_day_list):
-    logging.info("update entries in anw")
-    wb = load_workbook(file_path)
-    anw = wb["ANW"]
+# def update_entries_in_anw_with_openpyxl (time_entry_list, file_path, workingtime_by_day_list):
+#     logging.info("update entries in anw")
+#     wb = load_workbook(file_path)
+#     anw = wb["ANW"]
     
-    # enter working hours
-    for project in time_entry_list:
-        logging.debug("project: " + project)
+#     # enter working hours
+#     for project in time_entry_list:
+#         logging.debug("project: " + project)
         
-        if "reisen" not in project.lower():
-            col_start = 8
-            col_end = 37
-        else:
-            col_start = 39
-            col_end = 43
+#         if "reisen" not in project.lower():
+#             col_start = 8
+#             col_end = 37
+#         else:
+#             col_start = 39
+#             col_end = 43
         
-        project_col = -1
-        excel_proj = "empty"
+#         project_col = -1
+#         excel_proj = "empty"
         
-        for col in range(col_start, col_end):
-            if anw.cell(row=4, column=col).value is None or anw.cell(row=4, column=col).value == "":
-                continue
-            excel_proj = anw.cell(row=4, column=col).value[:4] # type: ignore
-            if excel_proj == project[:4]:
-                project_col = col
-                break
+#         for col in range(col_start, col_end):
+#             if anw.cell(row=4, column=col).value is None or anw.cell(row=4, column=col).value == "":
+#                 continue
+#             excel_proj = anw.cell(row=4, column=col).value[:4] # type: ignore
+#             if excel_proj == project[:4]:
+#                 project_col = col
+#                 break
         
-        if project_col == -1 or excel_proj != project[:4]:
-            logging.error("project '" + str(project) + "' not found in excel")
-            raise KeyError("project '" + str(project) + "' not found in excel")
+#         if project_col == -1 or excel_proj != project[:4]:
+#             logging.error("project '" + str(project) + "' not found in excel")
+#             raise KeyError("project '" + str(project) + "' not found in excel")
         
         
-        for date_str in time_entry_list[project]:
-            logging.debug("date: " + date_str)
-            logging.debug("hours: " + str(time_entry_list[project][date_str]["hours"]))
+#         for date_str in time_entry_list[project]:
+#             logging.debug("date: " + date_str)
+#             logging.debug("hours: " + str(time_entry_list[project][date_str]["hours"]))
             
-            row_offset = 5
+#             row_offset = 5
             
-            day =  parser.parse(date_str).day
+#             day =  parser.parse(date_str).day
             
-            anw.cell(row = day + row_offset, column=project_col).value = time_entry_list[project][date_str]["hours"]
+#             anw.cell(row = day + row_offset, column=project_col).value = time_entry_list[project][date_str]["hours"]
     
-    # working times per day       
-    for date_str in workingtime_by_day_list:
-        logging.debug("date: " + str(date_str))
-        logging.debug("hours: " + str(workingtime_by_day_list[date_str]))
+#     # working times per day       
+#     for date_str in workingtime_by_day_list:
+#         logging.debug("date: " + str(date_str))
+#         logging.debug("hours: " + str(workingtime_by_day_list[date_str]))
         
-        row_offset = 5
+#         row_offset = 5
         
-        day = parser.parse(date_str).day
-        if  workingtime_by_day_list[date_str]["endtime"].hour == 0:
-            hour = 24
-        else:
-            hour = int(workingtime_by_day_list[date_str]["endtime"].strftime("%H"))
+#         day = parser.parse(date_str).day
+#         if  workingtime_by_day_list[date_str]["endtime"].hour == 0:
+#             hour = 24
+#         else:
+#             hour = int(workingtime_by_day_list[date_str]["endtime"].strftime("%H"))
         
-        anw.cell(row = day + row_offset, column=3).value = workingtime_by_day_list[date_str]["starttime"].hour + workingtime_by_day_list[date_str]["starttime"].minute/100
-        anw.cell(row = day + row_offset, column=4).value = hour + workingtime_by_day_list[date_str]["endtime"].minute/100
+#         anw.cell(row = day + row_offset, column=3).value = workingtime_by_day_list[date_str]["starttime"].hour + workingtime_by_day_list[date_str]["starttime"].minute/100
+#         anw.cell(row = day + row_offset, column=4).value = hour + workingtime_by_day_list[date_str]["endtime"].minute/100
                     
-    wb.save(file_path.replace(".xlsx", "") + "n.xlsx")
+#     wb.save(file_path.replace(".xlsx", "") + "n.xlsx")
 
 # The function to update the cell M1, save the new file, and delete the old one
 def adjust_anws_for_new_month(folder, file, prefix, yearmonth, suffix, new_overtimehours):
@@ -248,9 +248,12 @@ if __name__ == '__main__':
     logging.debug("Debugging is enabled")
     
     linux_folder = "/mnt/c/Users/PrV/OneDrive - viadee Unternehmensberatung AG/Arbeitsnachweis/"
+    mac_folder = "/Users/prv/Library/CloudStorage/OneDrive-viadeeUnternehmensberatungAG/Arbeitsnachweis/"
     windows_folder = linux_folder.replace('/mnt/c', 'C:').replace('/', '\\')
     if sys.platform == 'linux': # execution in WSL Linux
         folder = linux_folder
+    elif sys.platform == 'darwin': # execution on macOS
+        folder = mac_folder
     else: # execution probably in windows
         folder = windows_folder
     
@@ -291,11 +294,11 @@ if __name__ == '__main__':
             logging.info(f"Original Excel file should not be edited. But new Excel '{file_new}' already exists and is opened. . If it should be replaced, close it and restart Skript.")
         file = file_new
     
-    on_windows = True;
-    if on_windows:
-        new_overtimehours = update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_list)
-        adjust_anws_for_new_month(folder, file, match.group(1), match.group(2), match.group(3), new_overtimehours)
-    else:
-        update_entries_in_anw_with_openpyxl(time_entry_list, folder, file, workingtime_by_day_list)
+    # on_windows = True;
+    # if on_windows:
+    new_overtimehours = update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_list)
+    adjust_anws_for_new_month(folder, file, match.group(1), match.group(2), match.group(3), new_overtimehours)
+    # else:
+    #     update_entries_in_anw_with_openpyxl(time_entry_list, folder, file, workingtime_by_day_list)
     
     logging.info("Finished Toggl to Anw Transfer")
