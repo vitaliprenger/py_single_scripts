@@ -59,7 +59,7 @@ def update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_
                 col_end = switch_col_number - 1
             else:
                 col_start = switch_col_number + 1
-                col_end = 50
+                col_end = 100
 
             project_col = -1
             excel_proj = "empty"
