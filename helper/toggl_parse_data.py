@@ -29,6 +29,24 @@ def get_toggl_time_entries(start_date, end_date):
     response = requests.get(
         "https://api.track.toggl.com/api/v9/me/clients", headers=headers
     )
+
+    if response.status_code == 402:
+        # Extract remaining seconds from response text
+        match = re.search(r"reset in (\d+) seconds", response.text)
+        if match:
+            remaining_seconds = int(match.group(1))
+            minutes, seconds = divmod(remaining_seconds, 60)
+            time_str = f"{minutes}m {seconds}s"
+        else:
+            time_str = "unknown"
+
+        logging.error(
+            f"Quota reached: HTTP 402. Please wait before making further requests. Quota resets in {time_str}."
+        )
+        raise Exception(
+            f"Quota reached: HTTP 402. Please wait before making further requests. Quota resets in {time_str}."
+        )
+
     for client in response.json():
         if client_list.get(client["id"]) is None:
             client_list[client["id"]] = client["name"]
