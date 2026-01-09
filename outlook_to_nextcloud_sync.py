@@ -221,8 +221,9 @@ class OutlookCalendarClient:
         if NOTIFICATION_EMAIL:
             user_code = flow.get("user_code")
             verification_uri = flow.get("verification_uri")
-            send_auth_email(user_code, verification_uri, NOTIFICATION_EMAIL)
-            print(f"📧 Authentication notification sent to {NOTIFICATION_EMAIL}")
+            if user_code and verification_uri:
+                send_auth_email(user_code, verification_uri, NOTIFICATION_EMAIL)
+                print(f"📧 Authentication notification sent to {NOTIFICATION_EMAIL}")
         else:
             print(
                 "ℹ️  Tip: Configure 'notification_email' in config.py to receive auth requests via email"
