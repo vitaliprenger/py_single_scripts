@@ -10,6 +10,9 @@ eucon_gitlab_api_token = "token"
 ms_graph_client_id = "your-azure-app-client-id"
 ms_graph_tenant_id = "your-tenant-id-or-common"
 
+# Email notification for server authentication (optional)
+notification_email = "your-email@example.com"
+
 # Nextcloud CalDAV
 nextcloud_url = "https://your-nextcloud.com"
 nextcloud_username = "your-username"
