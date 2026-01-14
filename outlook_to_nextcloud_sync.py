@@ -9,13 +9,16 @@ Features:
 - Incremental sync (only changes are synced)
 - Handles create, update, and delete operations
 - Configurable sync window (past/future days)
+- Delete birthday events from Outlook calendar
 
 Usage:
     python outlook_to_nextcloud_sync.py [--full-sync] [--dry-run]
+    python outlook_to_nextcloud_sync.py --delete-birthdays [--dry-run]
 
 Options:
-    --full-sync   Force a full resync of all events
-    --dry-run     Show what would be synced without making changes
+    --full-sync           Force a full resync of all events
+    --dry-run             Show what would be synced without making changes
+    --delete-birthdays    Delete all birthday events from Outlook (requires Calendars.ReadWrite)
 """
 
 import argparse
@@ -45,7 +48,9 @@ from helper import config
 MS_GRAPH_CLIENT_ID = config.ms_graph_client_id
 MS_GRAPH_TENANT_ID = config.ms_graph_tenant_id
 MS_GRAPH_AUTHORITY = f"https://login.microsoftonline.com/{MS_GRAPH_TENANT_ID}"
-MS_GRAPH_SCOPES = ["Calendars.Read"]
+MS_GRAPH_SCOPES = [
+    "Calendars.ReadWrite"
+]  # Changed from Read to ReadWrite for delete capability
 
 # Email notification settings (for server execution)
 NOTIFICATION_EMAIL = getattr(
@@ -275,6 +280,69 @@ class OutlookCalendarClient:
 
         print(f"✓ Fetched {len(all_events)} events from Outlook")
         return all_events
+
+    def delete_event(self, event_id: str) -> bool:
+        """Delete a calendar event by ID."""
+        access_token = self.get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        url = f"https://graph.microsoft.com/v1.0/me/events/{event_id}"
+        response = requests.delete(url, headers=headers)
+
+        if response.status_code == 204:
+            return True
+        elif response.status_code == 404:
+            print(f"⚠ Event {event_id} not found (already deleted?)")
+            return False
+        else:
+            print(f"⚠ Failed to delete event {event_id}: {response.status_code}")
+            return False
+
+    def find_birthday_events(
+        self, start_date: datetime, end_date: datetime
+    ) -> list[dict]:
+        """Find birthday events within the specified date range."""
+        events = self.fetch_events(start_date, end_date)
+        birthday_events = []
+
+        for event in events:
+            subject = event.get("subject", "")
+            # Check if it's a birthday event (format: "FirstName LastName's Birthday")
+            if subject.endswith("'s Birthday") or subject.endswith("´s Birthday"):
+                birthday_events.append(event)
+
+        return birthday_events
+
+    def delete_birthday_events(
+        self, start_date: datetime, end_date: datetime, dry_run: bool = False
+    ) -> dict:
+        """Delete all birthday events within the specified date range."""
+        birthday_events = self.find_birthday_events(start_date, end_date)
+
+        stats = {"found": len(birthday_events), "deleted": 0, "failed": 0}
+
+        print(f"\n📅 Found {len(birthday_events)} birthday events")
+
+        for event in birthday_events:
+            event_id = event.get("id")
+            subject = event.get("subject", "Unknown")
+            start = event.get("start", {}).get("dateTime", "")
+
+            if dry_run:
+                print(f"  [DRY-RUN] Would delete: {subject} on {start}")
+                stats["deleted"] += 1
+            else:
+                print(f"  Deleting: {subject} on {start}")
+                if event_id is not None:
+                    if self.delete_event(event_id):
+                        stats["deleted"] += 1
+                    else:
+                        stats["failed"] += 1
+                else:
+                    print(f"⚠️  Warning: Event ID is None for '{subject}', skipping deletion.")
+                    stats["failed"] += 1
+
+        return stats
 
 
 # ============================================================================
@@ -541,9 +609,12 @@ def sync_calendars(dry_run: bool = False, full_sync: bool = False):
         dry_run: If True, show what would be synced without making changes
         full_sync: If True, clear sync state and resync everything
     """
-    print("=" * 60)
-    print("Outlook 365 → Nextcloud Calendar Sync")
-    print("=" * 60)
+    print("\n" + "#" * 80)
+    print("#" + "" * 78 + "#")
+    print("#  " + "Outlook 365 → Nextcloud Calendar Sync".center(74) + "  #")
+    print("#  " + datetime.now().strftime("%Y-%m-%d %H:%M:%S").center(74) + "  #")
+    print("#" + " " * 78 + "#")
+    print("#" * 80)
 
     if dry_run:
         print("🔍 DRY RUN MODE - No changes will be made")
@@ -676,6 +747,8 @@ def sync_calendars(dry_run: bool = False, full_sync: bool = False):
     else:
         print("\n✅ Sync completed successfully!")
 
+    print("\n" + "#" * 80 + "\n")
+
 
 # ============================================================================
 # CLI Entry Point
@@ -696,11 +769,61 @@ def main():
         action="store_true",
         help="Clear sync state and perform a full resync",
     )
+    parser.add_argument(
+        "--delete-birthdays",
+        action="store_true",
+        help="Delete all birthday events from Outlook calendar (requires Calendars.ReadWrite permission)",
+    )
 
     args = parser.parse_args()
 
     try:
-        sync_calendars(dry_run=args.dry_run, full_sync=args.full_sync)
+        if args.delete_birthdays:
+            # Delete birthday events mode
+            print("\n" + "#" * 80)
+            print("#" + " " * 78 + "#")
+            print("#  " + "🎂 Birthday Events Deletion Mode".center(74) + "  #")
+            print(
+                "#  " + datetime.now().strftime("%Y-%m-%d %H:%M:%S").center(74) + "  #"
+            )
+            print("#" + " " * 78 + "#")
+            print("#" * 80)
+
+            outlook = OutlookCalendarClient(
+                MS_GRAPH_CLIENT_ID, MS_GRAPH_AUTHORITY, MS_GRAPH_SCOPES
+            )
+
+            # Define date range (use same as sync settings)
+            start_date = datetime.now(timezone.utc) - timedelta(days=SYNC_PAST_DAYS)
+            end_date = datetime.now(timezone.utc) + timedelta(days=SYNC_FUTURE_DAYS)
+
+            print(
+                f"📅 Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+            )
+
+            # Delete birthdays
+            stats = outlook.delete_birthday_events(
+                start_date, end_date, dry_run=args.dry_run
+            )
+
+            # Print summary
+            print("\n" + "=" * 60)
+            print("📊 Deletion Summary")
+            print("=" * 60)
+            print(f"  🎂 Found:    {stats['found']}")
+            print(f"  🗑️  Deleted:  {stats['deleted']}")
+            print(f"  ❌ Failed:   {stats['failed']}")
+            print("=" * 60)
+
+            if args.dry_run:
+                print("\n🔍 This was a DRY RUN - no changes were made")
+            else:
+                print("\n✅ Birthday deletion completed!")
+
+            print("\n" + "#" * 80 + "\n")
+        else:
+            # Normal sync mode
+            sync_calendars(dry_run=args.dry_run, full_sync=args.full_sync)
     except Exception as e:
         print(f"\n❌ Error: {e}")
         raise
