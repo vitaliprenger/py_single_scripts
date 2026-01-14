@@ -176,6 +176,92 @@ Automated notification from server
         print("    Check your SMTP settings in config.py")
 
 
+def send_error_email(error_message: str, error_details: str = ""):
+    """Send error notification email when script fails."""
+    if not NOTIFICATION_EMAIL or not NOTIFICATION_SMTP_PASSWORD:
+        print("⚠️  Email notification disabled: SMTP not configured")
+        return
+
+    try:
+        # Determine sender
+        sender = NOTIFICATION_SMTP_USER or NOTIFICATION_EMAIL
+
+        # Create email message
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "❌ Outlook Calendar Sync - Script Failed"
+        msg["From"] = sender
+        msg["To"] = NOTIFICATION_EMAIL
+
+        # Current timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Plain text body
+        text_body = f"""Outlook Calendar Sync Script Failed
+
+Timestamp: {timestamp}
+
+Error:
+{error_message}
+
+{error_details if error_details else ""}
+
+---
+Outlook to Nextcloud Calendar Sync
+Automated error notification
+"""
+
+        # HTML body
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #d13438; color: white; padding: 20px; border-radius: 5px 5px 0 0; }}
+        .content {{ background: #f5f5f5; padding: 20px; border-radius: 0 0 5px 5px; }}
+        .error-box {{ background: white; border: 2px solid #d13438; padding: 15px; margin: 20px 0; font-family: monospace; white-space: pre-wrap; }}
+        .timestamp {{ color: #666; font-size: 14px; }}
+        .footer {{ margin-top: 20px; font-size: 12px; color: #666; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>❌ Script Execution Failed</h2>
+        </div>
+        <div class="content">
+            <p class="timestamp">⏰ Timestamp: {timestamp}</p>
+            <p><strong>Outlook Calendar Sync</strong> encountered an error and failed to complete:</p>
+            <div class="error-box">{error_message}</div>
+            {f'<p><strong>Details:</strong></p><div class="error-box">{error_details}</div>' if error_details else ""}
+            <p>Please check the server logs for more information.</p>
+            <div class="footer">
+                <p>---<br>Outlook to Nextcloud Calendar Sync<br>Automated error notification</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+        # Attach both plain text and HTML versions
+        part1 = MIMEText(text_body, "plain")
+        part2 = MIMEText(html_body, "html")
+        msg.attach(part1)
+        msg.attach(part2)
+
+        # Connect to SMTP server and send
+        with smtplib.SMTP(NOTIFICATION_SMTP_HOST, NOTIFICATION_SMTP_PORT) as server:
+            server.starttls()  # Upgrade to encrypted connection
+            server.login(sender, NOTIFICATION_SMTP_PASSWORD)
+            server.send_message(msg)
+
+        print(f"📧 Error notification email sent to {NOTIFICATION_EMAIL}")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not send error notification email: {e}")
+        print(f"    SMTP: {NOTIFICATION_SMTP_HOST}:{NOTIFICATION_SMTP_PORT}")
+
+
 # ============================================================================
 # Microsoft Graph API - Authentication & Event Fetching
 # ============================================================================
@@ -339,7 +425,9 @@ class OutlookCalendarClient:
                     else:
                         stats["failed"] += 1
                 else:
-                    print(f"⚠️  Warning: Event ID is None for '{subject}', skipping deletion.")
+                    print(
+                        f"⚠️  Warning: Event ID is None for '{subject}', skipping deletion."
+                    )
                     stats["failed"] += 1
 
         return stats
@@ -825,7 +913,17 @@ def main():
             # Normal sync mode
             sync_calendars(dry_run=args.dry_run, full_sync=args.full_sync)
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        import traceback
+
+        error_msg = str(e)
+        error_details = traceback.format_exc()
+
+        print(f"\n❌ Error: {error_msg}")
+        print(f"\n{error_details}")
+
+        # Send error notification email
+        send_error_email(error_msg, error_details)
+
         raise
 
 
