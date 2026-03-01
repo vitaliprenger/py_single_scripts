@@ -26,20 +26,21 @@ def update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_
     logging.debug("In update_entries_in_anw_new")
 
     with xw.Book(folder + file) as wb:
-        anw = wb.sheets["ANW"]
+        app = wb.app
+        # app.screen_updating = False
+        app.calculation = "manual"
 
-        last_row_before_days_of_month = (
-            4  # days of month start after row 5 (or 4 in xlwings)
-        )
+        try:
+            anw = wb.sheets["ANW"]
 
-        # Enter working hours
-        for project in time_entry_list:
-            logging.debug("project: " + project)
-
+            last_row_before_days_of_month = (
+                4  # days of month start after row 5 (or 4 in xlwings)
+            )
             anw_project_column_start = 7  # H column
             anw_project_title_row = 3  # row 4 because xlwings starts with 0
+
+            # Resolve switch column once (same for all projects)
             switch_col_number = -1
-            # Fetch the entire row at once for better performance
             row_values = anw[anw_project_title_row, anw_project_column_start:100].value
             for idx, cell_value in enumerate(row_values):
                 if cell_value == "angerechn. Reisezeit":
@@ -48,75 +49,96 @@ def update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_
 
             if switch_col_number == -1:
                 logging.error(
-                    "Column angerechn. Reisezeit not found in row 4 of the ANW"
+                    'Column "angerechn. Reisezeit" not found in row 4 of the ANW'
                 )
                 raise KeyError(
-                    "Column angerechn. Reisezeit not found in row 4 of the ANW"
+                    'Column "angerechn. Reisezeit" not found in row 4 of the ANW'
                 )
 
-            if "reisen" not in project.lower():
-                col_start = anw_project_column_start
-                col_end = switch_col_number - 1
-            else:
-                col_start = switch_col_number + 1
-                col_end = 200
+            # Enter working hours
+            for project in time_entry_list:
+                logging.debug("project: " + project)
 
-            project_col = -1
-            excel_proj = "empty"
+                if "reisen" not in project.lower():
+                    col_start = anw_project_column_start
+                    col_end = switch_col_number - 1
+                else:
+                    col_start = switch_col_number + 1
+                    col_end = 200
 
-            # Fetch the entire row at once for better performance
-            row_values = anw[anw_project_title_row, col_start:col_end].value
-            for idx, cell_value in enumerate(row_values):
-                if cell_value is None or cell_value == "":
-                    continue
-                excel_proj = str(cell_value)[:4]
-                if excel_proj == project[:4]:
-                    project_col = col_start + idx
-                    break
+                project_col = -1
+                excel_proj = "empty"
 
-            if project_col == -1 or excel_proj != project[:4]:
-                logging.error("project '" + str(project) + "' not found in excel")
-                raise KeyError("project '" + str(project) + "' not found in excel")
+                # search project column by project name in row 4
+                row_values = anw[anw_project_title_row, col_start:col_end].value
+                for idx, cell_value in enumerate(row_values):
+                    if cell_value is None or cell_value == "":
+                        continue
+                    excel_proj = str(cell_value)[:4]
+                    if excel_proj == project[:4]:
+                        project_col = col_start + idx
+                        break
+                if project_col == -1 or excel_proj != project[:4]:
+                    logging.error('project "' + str(project) + '" not found in excel')
+                    raise KeyError('project "' + str(project) + '" not found in excel')
 
-            for date_str in time_entry_list[project]:
-                logging.debug("date: " + date_str)
-                logging.debug(
-                    "hours: " + str(time_entry_list[project][date_str]["hours"])
-                )
+                # Collect all day values, then write the whole column in one COM call
+                col_data = [None] * 31
+                for date_str in time_entry_list[project]:
+                    logging.debug("date: " + date_str)
+                    logging.debug(
+                        "hours: " + str(time_entry_list[project][date_str]["hours"])
+                    )
+                    day = parser.parse(date_str).day
+                    col_data[day - 1] = time_entry_list[project][date_str]["hours"]
+
+                first_row = last_row_before_days_of_month + 1
+                anw[first_row : first_row + 31, project_col : project_col + 1].value = [
+                    [v] for v in col_data
+                ]
+
+            # Working times per day — collect all days, then write both columns in one COM call
+            start_data = [None] * 31
+            end_data = [None] * 31
+            for date_str in workingtime_by_day_list:
+                logging.debug("date: " + str(date_str))
+                logging.debug("hours: " + str(workingtime_by_day_list[date_str]))
 
                 day = parser.parse(date_str).day
+                if workingtime_by_day_list[date_str]["endtime"].hour == 0:
+                    hour = 24
+                else:
+                    hour = int(
+                        workingtime_by_day_list[date_str]["endtime"].strftime("%H")
+                    )
 
-                anw[
-                    last_row_before_days_of_month + day, project_col
-                ].value = time_entry_list[project][date_str]["hours"]
+                start_data[day - 1] = (
+                    workingtime_by_day_list[date_str]["starttime"].hour
+                    + workingtime_by_day_list[date_str]["starttime"].minute / 100
+                )
+                end_data[day - 1] = (
+                    hour + workingtime_by_day_list[date_str]["endtime"].minute / 100
+                )
 
-        # Working times per day
-        for date_str in workingtime_by_day_list:
-            logging.debug("date: " + str(date_str))
-            logging.debug("hours: " + str(workingtime_by_day_list[date_str]))
+            first_row = last_row_before_days_of_month + 1
+            anw[first_row : first_row + 31, 2:4].value = [
+                [s, e] for s, e in zip(start_data, end_data)
+            ]
 
-            day = parser.parse(date_str).day
-            if workingtime_by_day_list[date_str]["endtime"].hour == 0:
-                hour = 24
-            else:
-                hour = int(workingtime_by_day_list[date_str]["endtime"].strftime("%H"))
+            new_overtimehours = anw["F42"].value
 
-            anw[last_row_before_days_of_month + day, 2].value = (
-                workingtime_by_day_list[date_str]["starttime"].hour
-                + workingtime_by_day_list[date_str]["starttime"].minute / 100
-            )
-            anw[last_row_before_days_of_month + day, 3].value = (
-                hour + workingtime_by_day_list[date_str]["endtime"].minute / 100
-            )
+        finally:
+            app.calculation = "automatic"
+            # app.screen_updating = True
 
-        new_overtimehours = anw["F42"].value
         wb.save()
 
         root = tk.Tk()
         root.withdraw()  # Hides the main window
 
         result = messagebox.askyesno(
-            "Confirmation", "Passt alles so? Excel wird dann geschlossen."
+            "Confirmation",
+            "Passt alles so? Sollen Folgeschritte gestartet werden? Excel wird auf jeden Fall geschlossen.",
         )
         if result:
             logging.info(f"Closing excel file: {file}")
