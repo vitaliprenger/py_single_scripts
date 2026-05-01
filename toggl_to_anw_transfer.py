@@ -125,11 +125,11 @@ def update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_
                 [s, e] for s, e in zip(start_data, end_data)
             ]
 
-            new_overtimehours = anw["F42"].value
-
         finally:
             app.calculation = "automatic"
             # app.screen_updating = True
+
+            new_overtimehours = anw["F42"].value
 
         wb.save()
 
@@ -149,67 +149,6 @@ def update_entries_in_anw_new(time_entry_list, folder, file, workingtime_by_day_
 
     logging.debug("End of update_entries_in_anw_new")
     return new_overtimehours
-
-
-# def update_entries_in_anw_with_openpyxl (time_entry_list, file_path, workingtime_by_day_list):
-#     logging.info("update entries in anw")
-#     wb = load_workbook(file_path)
-#     anw = wb["ANW"]
-
-#     # enter working hours
-#     for project in time_entry_list:
-#         logging.debug("project: " + project)
-
-#         if "reisen" not in project.lower():
-#             col_start = 8
-#             col_end = 37
-#         else:
-#             col_start = 39
-#             col_end = 43
-
-#         project_col = -1
-#         excel_proj = "empty"
-
-#         for col in range(col_start, col_end):
-#             if anw.cell(row=4, column=col).value is None or anw.cell(row=4, column=col).value == "":
-#                 continue
-#             excel_proj = anw.cell(row=4, column=col).value[:4] # type: ignore
-#             if excel_proj == project[:4]:
-#                 project_col = col
-#                 break
-
-#         if project_col == -1 or excel_proj != project[:4]:
-#             logging.error("project '" + str(project) + "' not found in excel")
-#             raise KeyError("project '" + str(project) + "' not found in excel")
-
-
-#         for date_str in time_entry_list[project]:
-#             logging.debug("date: " + date_str)
-#             logging.debug("hours: " + str(time_entry_list[project][date_str]["hours"]))
-
-#             row_offset = 5
-
-#             day =  parser.parse(date_str).day
-
-#             anw.cell(row = day + row_offset, column=project_col).value = time_entry_list[project][date_str]["hours"]
-
-#     # working times per day
-#     for date_str in workingtime_by_day_list:
-#         logging.debug("date: " + str(date_str))
-#         logging.debug("hours: " + str(workingtime_by_day_list[date_str]))
-
-#         row_offset = 5
-
-#         day = parser.parse(date_str).day
-#         if  workingtime_by_day_list[date_str]["endtime"].hour == 0:
-#             hour = 24
-#         else:
-#             hour = int(workingtime_by_day_list[date_str]["endtime"].strftime("%H"))
-
-#         anw.cell(row = day + row_offset, column=3).value = workingtime_by_day_list[date_str]["starttime"].hour + workingtime_by_day_list[date_str]["starttime"].minute/100
-#         anw.cell(row = day + row_offset, column=4).value = hour + workingtime_by_day_list[date_str]["endtime"].minute/100
-
-#     wb.save(file_path.replace(".xlsx", "") + "n.xlsx")
 
 
 # The function to update the cell M1, save the new file, and delete the old one
