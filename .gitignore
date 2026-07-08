@@ -1,6 +1,7 @@
 *.log
 *.pickle
 config.py
+jira_tokens.json
 __pycache__
 .venv
 venv

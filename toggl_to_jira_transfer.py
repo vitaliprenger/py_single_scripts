@@ -18,7 +18,7 @@ def get_eucon_jira_worklog_list(start_date, end_date):
     jira = JIRA(
         basic_auth=(config.jira_user, config.jira_token), options={"server": jira_url}
     )
-    jql = f"worklogDate >= {start_date} AND worklogDate <= {end_date} AND worklogAuthor = currentUser()"
+    jql = f"worklogDate >= {start_date} AND worklogDate <= {end_date} AND worklogAuthor = '{config.jira_account_id}'"
     issues = jira.search_issues(jql, maxResults=1000)
 
     # Create a dictionary for the request body
@@ -165,15 +165,15 @@ if __name__ == "__main__":
     logging.debug("Start Date: " + str(start_date))
     logging.debug("End Date: " + str(end_date))
 
+    jira_worklog_list = get_eucon_jira_worklog_list(start_date, end_date)
+
+    # jira_worklog_list = pickle.load(open("jiraWorklogList.pickle", "rb"))
+
     time_entry_list, workingtime_by_day_list, time_entry_list_detail = (
         get_toggl_time_entries(start_date, end_date)
     )
 
     # time_entry_list = pickle.load(open("timeEntryList.pickle", "rb"))
-
-    jira_worklog_list = get_eucon_jira_worklog_list(start_date, end_date)
-
-    # jira_worklog_list = pickle.load(open("jiraWorklogList.pickle", "rb"))
 
     add_missing_entries_for_eucon(time_entry_list, jira_worklog_list)
 
